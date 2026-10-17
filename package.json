@@ -6,21 +6,27 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:migrate": "set -a && . ./.env.local && set +a && node scripts/migrate.mjs && auth migrate --config auth.cli.ts -y"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0",
+    "@vercel/blob": "^2.8.2",
+    "better-auth": "^1.7.10",
     "next": "16.4.2",
     "pdfjs-dist": "^6.4.299",
     "pg": "^8.23.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "auth": "^1.7.10",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
     "typescript": "^5"

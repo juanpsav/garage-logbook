@@ -174,3 +174,7 @@ button.chip{border:0;cursor:pointer}
 .doc-sum{min-width:0}
 a{color:var(--accent)}
 #turnstile-slot:empty{display:none}
+.sched-field{grid-column:1 / -1;gap:6px}
+.self-start{align-self:flex-start}
+.finder{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.finder input{flex:1 1 220px;min-width:0;border:1px solid var(--line);border-radius:6px;padding:6px 9px;background:var(--surface)}

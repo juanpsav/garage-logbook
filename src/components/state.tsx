@@ -19,7 +19,7 @@ export type DocForm = {
   recs: Record<number, { on: boolean; title: string; urgency: "now" | "soon" | "later" }>;
 };
 
-function useGarageState(store: Store) {
+function useGarageState(store: Store, owner: { id: string; email: string } | null) {
   const [data, setData] = useState<Data>(emptyData);
   const [loaded, setLoaded] = useState(false);
   const [schedules, setSchedules] = useState<Schedule[]>(seedSchedules as Schedule[]);
@@ -302,8 +302,26 @@ function useGarageState(store: Store) {
     toast([logId && "Added to history", taskIds.length && `${taskIds.length} task${taskIds.length === 1 ? "" : "s"} created`].filter(Boolean).join(" · ") || "Saved");
   };
 
+  /* ---------- schedule lookup (owner only) ---------- */
+  const findSchedule = async (vehicle: string): Promise<Schedule | string> => {
+    try {
+      const res = await fetch("/api/vehicles/schedule", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vehicle }) });
+      const json = await res.json().catch(() => null);
+      if (res.ok && json?.schedule) {
+        const sc = json.schedule as Schedule;
+        setSchedules((list) => [...list.filter((x) => x.id !== sc.id), sc]);
+        return sc;
+      }
+      return json?.error === "not_found" ? "Couldn't find an official schedule for that vehicle. Check the year, model and engine, or keep the general suggestions."
+        : json?.error === "rate_limited" ? "You've used today's schedule lookups. Try again tomorrow."
+        : "The lookup didn't finish. Try again in a minute.";
+    } catch {
+      return "The lookup didn't finish. Check your connection and try again.";
+    }
+  };
+
   return {
-    store, data, loaded, schedules, cars, carById,
+    store, owner, data, loaded, schedules, cars, carById, findSchedule,
     ui: { car, view, open, adding, busy, reading, toastMsg },
     setCar, setView, setOpen, setAdding, close, toast,
     addCar, editCar, setOdometer, deleteCar,
@@ -316,8 +334,8 @@ function useGarageState(store: Store) {
 export type Garage = ReturnType<typeof useGarageState>;
 const Ctx = createContext<Garage | null>(null);
 
-export function GarageProvider({ store, children }: { store: Store; children: React.ReactNode }) {
-  const g = useGarageState(store);
+export function GarageProvider({ store, owner, children }: { store: Store; owner: { id: string; email: string } | null; children: React.ReactNode }) {
+  const g = useGarageState(store, owner);
   return <Ctx.Provider value={g}>{children}</Ctx.Provider>;
 }
 

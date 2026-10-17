@@ -24,6 +24,8 @@ const memory = new Map<string, number>();
  */
 export async function take(buckets: { key: string; limit: number }[]): Promise<string | null> {
   const d = day();
+  // In-memory counts reset on every cold start, so they protect nothing in production.
+  if (!hasDb() && process.env.VERCEL_ENV === "production") return buckets[0]?.key ?? "no-db";
   for (const b of buckets) {
     const key = `${d}:${b.key}`;
     let count: number;
