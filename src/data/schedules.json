@@ -1,0 +1,142 @@
+[
+  {
+    "id": "ford-f150-2018-27",
+    "alsoGeneric": [
+      "brakefluid"
+    ],
+    "items": [
+      {
+        "key": "m-oil",
+        "km": 16000,
+        "months": 12,
+        "title": "Oil change, tire rotation and multi-point inspection",
+        "why": "Do it when the dash shows OIL CHANGE REQUIRED, and never go past 1 year or 16 000 km. Includes rotating tires and checking brakes, cooling system, exhaust, steering, suspension and front axle U-joints. Ford expects the message every 8 000–12 000 km with towing, heavy loads, idling or extended cold. Reset the oil-life monitor after."
+      },
+      {
+        "key": "m-cabin",
+        "km": 32000,
+        "title": "Cabin air filter",
+        "why": ""
+      },
+      {
+        "key": "m-air",
+        "km": 48000,
+        "title": "Engine air filter",
+        "why": "Replace sooner on dusty or gravel roads."
+      },
+      {
+        "key": "m-plugs",
+        "km": 160000,
+        "title": "Spark plugs",
+        "why": "Ford's normal interval. If you tow often or idle a lot, Ford says every 96 000 km."
+      },
+      {
+        "firstKm": 160000,
+        "firstMonths": 72,
+        "key": "m-coolant",
+        "km": 80000,
+        "months": 36,
+        "title": "Engine coolant replacement",
+        "why": "First change at 6 years or 160 000 km, then every 3 years or 80 000 km."
+      },
+      {
+        "key": "m-belt",
+        "km": 240000,
+        "title": "Accessory drive belt",
+        "why": "Replace at 240 000 km. Inspect it at 160 000 km, then at every other oil change."
+      },
+      {
+        "key": "m-trans",
+        "km": 240000,
+        "title": "Transmission fluid and filter",
+        "why": "10-speed automatic."
+      },
+      {
+        "key": "m-axle",
+        "km": 240000,
+        "title": "Axle and transfer case fluids",
+        "why": "Front axle and transfer case on 4x4, rear axle on all. Change right away if the truck has been in deep water."
+      }
+    ],
+    "modelYear": 2018,
+    "name": "2018 Ford F-150 2.7L EcoBoost",
+    "note": "Oil changes follow the truck's oil-life monitor. The other items are fixed distances; Ford says to do them within 4 800 km of the oil change closest to the interval.",
+    "source": "Ford 2018 F-150 Owner's Manual, Canada/US edition (Scheduled Maintenance, p. 563–572)",
+    "sourceUrl": "https://www.fordservicecontent.com/Ford_Content/Catalog/owner_information/2018-Ford-F-150-Owners-Manual_version-3_om_EN-US_EN-CA_01_2018_V3.pdf"
+  },
+  {
+    "id": "subaru-forester-2019",
+    "items": [
+      {
+        "key": "m-oil",
+        "km": 9600,
+        "months": 6,
+        "title": "Oil and filter change",
+        "why": "Severe driving (extreme cold, repeated short trips): every 3 months or 4 800 km. 0W-20 synthetic."
+      },
+      {
+        "key": "m-rotate",
+        "km": 9600,
+        "months": 6,
+        "title": "Rotate and inspect tires",
+        "why": "Replace a tire when the tread wear bars show (1.6 mm left)."
+      },
+      {
+        "key": "m-inspect12",
+        "km": 19200,
+        "months": 12,
+        "title": "Brake, steering and suspension inspection",
+        "why": "Brake pads, discs and lines, parking brake, axle boots and joints, steering, suspension, differential oil. With road salt or extreme cold: every 6 months or 9 600 km."
+      },
+      {
+        "key": "m-cabin",
+        "km": 19200,
+        "months": 12,
+        "title": "Cabin air filter",
+        "why": "Called the HVAC/A/C filter in the booklet."
+      },
+      {
+        "key": "m-air",
+        "km": 48000,
+        "months": 30,
+        "title": "Engine air filter",
+        "why": "Check more often on dusty roads."
+      },
+      {
+        "key": "m-brakefluid",
+        "km": 48000,
+        "months": 30,
+        "title": "Brake fluid replacement",
+        "why": "In humid or mountainous areas: every 15 months or 24 000 km."
+      },
+      {
+        "key": "m-inspect30",
+        "km": 48000,
+        "months": 30,
+        "title": "Inspect belts, fuel lines, cooling system and CVT fluid",
+        "why": "Inspection only. Subaru replaces CVT fluid only under severe use or frequent towing (every 40 000 km); use Subaru CVT fluid only."
+      },
+      {
+        "key": "m-plugs",
+        "km": 96000,
+        "months": 60,
+        "title": "Spark plugs",
+        "why": "Wheel bearings get inspected at the same interval."
+      },
+      {
+        "firstKm": 220000,
+        "firstMonths": 132,
+        "key": "m-coolant",
+        "km": 120000,
+        "months": 72,
+        "title": "Engine coolant replacement",
+        "why": "Subaru Super Coolant. First change at 11 years or 220 000 km, then every 6 years or 120 000 km. Add Subaru Cooling System Conditioner when replacing."
+      }
+    ],
+    "modelYear": 2019,
+    "name": "2019 Subaru Forester 2.5i",
+    "note": "Normal intervals shown. Subaru counts extremely cold weather, road salt and repeated short trips as severe driving; the notes on each item give the severe interval.",
+    "source": "Subaru 2019 Warranty and Maintenance Booklet (p. 28–29)",
+    "sourceUrl": "https://techinfo.subaru.com/stis/doc/warrantyBooklet/2019_war_and_maint_032019_S209_wHybridSup-2.pdf"
+  }
+]
