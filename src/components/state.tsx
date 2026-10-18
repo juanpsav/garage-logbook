@@ -316,7 +316,7 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
   /* ---------- schedule lookup ---------- */
   const findSchedule = async (vehicle: string): Promise<Schedule | string> => {
     let token: string | null = null;
-    try { token = owner ? null : await turnstileToken(); } catch { return "Couldn't confirm you're not a bot. Reload the page and try again."; }
+    try { token = owner ? null : await turnstileToken("schedule"); } catch { return "Couldn't confirm you're not a bot. Reload the page and try again."; }
     try {
       const res = await fetch("/api/vehicles/schedule", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vehicle, turnstile: token }) });
       const json = await res.json().catch(() => null);

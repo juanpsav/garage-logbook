@@ -15,7 +15,7 @@ export type GuestLimits = { total: number; perIp: number; perDevice: number };
 export async function guestGate(kind: string, token: string | null, limits: GuestLimits): Promise<"bot_check" | "busy" | "rate_limited" | null> {
   const h = await headers();
   const ip = (h.get("x-forwarded-for") ?? "").split(",")[0].trim() || h.get("x-real-ip") || null;
-  if (!(await verifyTurnstile(token, ip))) return "bot_check";
+  if (!(await verifyTurnstile(token, ip, kind))) return "bot_check";
   const jar = await cookies();
   let device = jar.get(DEVICE_COOKIE)?.value;
   if (!device || !/^[\w-]{36}$/.test(device)) {

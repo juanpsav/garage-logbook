@@ -17,7 +17,7 @@ const MESSAGES: Record<string, string> = {
 export async function readDocument(pages: Blob[], ctx: ReadContext, signal: AbortSignal): Promise<unknown> {
   let token: string | null = null;
   try {
-    token = await turnstileToken();
+    token = await turnstileToken("read");
   } catch {
     throw new ReadError(MESSAGES.bot_check);
   }
