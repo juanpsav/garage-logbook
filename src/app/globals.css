@@ -11,6 +11,8 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0}
+/* Stop iOS Safari from enlarging text in blocks it thinks are too wide. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45}
 .wrap{max-width:760px;margin:0 auto;padding-block:20px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:18px}
 h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:.01em}
@@ -98,6 +100,8 @@ form.card,.card{background:var(--surface);border:1px solid var(--line);border-ra
 .sug{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:11px 14px;border-top:1px solid var(--line);align-items:center}
 .sug:first-child{border-top:0}
 .sug .title{font-weight:600}
+.sug>div{min-width:0}
+.sug .chip{white-space:normal}
 .sug .why{grid-column:1 / -1;font-size:.85rem;color:var(--muted)}
 .sug.added{opacity:.6}
 .sug .panel{grid-column:1 / -1}
