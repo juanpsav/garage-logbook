@@ -325,7 +325,7 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
         setSchedules((list) => [...list.filter((x) => x.id !== sc.id), sc]);
         return sc;
       }
-      return json?.error === "not_found" ? "Couldn't find an official schedule. Check that the name has the year, make and model, then try again."
+      return json?.error === "not_found" ? "Couldn't find an official schedule. Check the year and model in the car's name (Cars tab), then try again."
         : json?.error === "rate_limited" ? "You've used today's schedule lookups. Try again tomorrow."
         : json?.error === "busy" ? "Too many lookups today. Try again tomorrow."
         : json?.error === "bot_check" ? "Couldn't confirm you're not a bot. Reload the page and try again."

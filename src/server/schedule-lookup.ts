@@ -29,11 +29,13 @@ export class LookupError extends Error {}
 
 const SYSTEM = `You find the official manufacturer maintenance schedule for one vehicle, for an owner in Quebec, Canada.
 
-Search for the manufacturer's own document (owner's manual maintenance chapter, warranty and maintenance booklet, or the manufacturer's service-schedule page) for this exact model year, model and engine. Fetch it and read the schedule itself; don't rely on dealer blogs or forum posts when the official document is available.
+Search for the manufacturer's own document (owner's manual maintenance chapter, warranty and maintenance booklet, or the manufacturer's service-schedule page) for this model year and model. Fetch it and read the schedule itself; don't rely on dealer blogs or forum posts when the official document is available.
 
 Report every scheduled replacement or inspection as one item with its interval. Use kilometres; convert miles to km and round to the nearest 100. Use the normal-driving intervals as the main values and put the severe-driving interval in "why" (Quebec winters usually count as severe, so mention it when the manual says so). Use firstMonths/firstKm only when the first service is at a different interval than the repeats (long-life coolant is typical). Leave out one-time checks, recalls and generic advice like "check tire pressure monthly".
 
-If you can't find an official schedule for this exact vehicle, set found to false and leave items empty rather than guessing.`;
+Owners often leave out the trim or engine. That's fine: schedules rarely differ by trim, and when they differ by engine, use the most common engine sold in Canada for that year, name it in "name" (e.g. "2015 Subaru Forester 2.5i"), and say in "note" which items differ for the other engines. Small spelling mistakes or a missing make ("2015 Forester") are fine too; work out the vehicle they mean.
+
+Set found to false only when no official schedule for that model year and model can be found, or the vehicle can't be identified; never guess intervals.`;
 
 /** Researches a vehicle's schedule with web search and fetch. Takes 30-120 seconds. */
 export async function lookupSchedule(vehicle: string): Promise<LookupResult> {

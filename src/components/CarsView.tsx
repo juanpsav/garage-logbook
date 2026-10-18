@@ -25,7 +25,7 @@ function CarFields({ car }: { car?: Car }) {
   return (
     <div className="fields">
       <label className="field wide"><span>Year, make and model</span>
-        <input name="name" required defaultValue={car?.name} placeholder="2019 Subaru Forester 2.5i" />
+        <input name="name" required defaultValue={car?.name} placeholder="2019 Subaru Forester" />
       </label>
       <label className="field"><span>Odometer (km)</span><input name="km" inputMode="numeric" required={!car} defaultValue={car?.km ?? ""} placeholder="84500" /></label>
       <ScheduleSelect value={car ? car.scheduleId ?? null : FIND} />
