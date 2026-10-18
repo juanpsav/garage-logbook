@@ -1,16 +1,13 @@
-import { cookies, headers } from "next/headers";
-import { randomUUID } from "node:crypto";
 import { readPrompt, type ReadContext } from "@/lib/extraction";
 import { readWithCohere, UpstreamError } from "@/server/cohere";
 import { LIMITS, take } from "@/server/limits";
 import { getOwner } from "@/server/session";
-import { verifyTurnstile } from "@/server/turnstile";
+import { guestGate } from "@/server/guest";
 
 export const maxDuration = 60;
 
 const MAX_PAGES = 4;
 const MAX_PAGE_BYTES = 1_500_000;
-const DEVICE_COOKIE = "gl_device";
 
 const fail = (error: string, status: number) => Response.json({ error }, { status });
 
@@ -41,28 +38,15 @@ export async function POST(req: Request) {
   try { ctx = cleanContext(JSON.parse(String(form.get("context") ?? ""))); } catch { /* invalid */ }
   if (!ctx) return fail("bad_request", 400);
 
-  const h = await headers();
-  const ip = (h.get("x-forwarded-for") ?? "").split(",")[0].trim() || h.get("x-real-ip") || null;
   const owner = await getOwner();
-  const jar = await cookies();
-
-  let over: string | null;
   if (owner) {
-    over = await take([{ key: `read:owner:${owner.id}`, limit: LIMITS.owner }]);
+    if (await take([{ key: `read:owner:${owner.id}`, limit: LIMITS.owner }])) return fail("rate_limited", 429);
   } else {
-    if (!(await verifyTurnstile(String(form.get("turnstile") ?? "") || null, ip))) return fail("bot_check", 403);
-    let device = jar.get(DEVICE_COOKIE)?.value;
-    if (!device || !/^[\w-]{36}$/.test(device)) {
-      device = randomUUID();
-      jar.set(DEVICE_COOKIE, device, { httpOnly: true, sameSite: "lax", secure: true, maxAge: 60 * 60 * 24 * 400, path: "/" });
-    }
-    over = await take([
-      { key: "read:guests", limit: LIMITS.guestTotal },
-      { key: `read:ip:${ip ?? "unknown"}`, limit: LIMITS.guestPerIp },
-      { key: `read:device:${device}`, limit: LIMITS.guestPerDevice },
-    ]);
+    const err = await guestGate("read", String(form.get("turnstile") ?? "") || null, {
+      total: LIMITS.guestTotal, perIp: LIMITS.guestPerIp, perDevice: LIMITS.guestPerDevice,
+    });
+    if (err) return fail(err, err === "bot_check" ? 403 : 429);
   }
-  if (over) return fail(over === "read:guests" ? "busy" : "rate_limited", 429);
 
   try {
     const buffers = await Promise.all(pages.map(async (p) => Buffer.from(await p.arrayBuffer())));

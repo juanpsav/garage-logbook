@@ -3,15 +3,14 @@
 import { useEffect, useState } from "react";
 import { acceptable } from "@/lib/files";
 import { status } from "@/lib/logic";
-import { CarsView, Welcome } from "./CarsView";
+import { CarsView, LookupStatus, Welcome } from "./CarsView";
 import { DocsView } from "./DocsView";
 import { useGarage, type View } from "./state";
-import { HistoryView } from "./HistoryView";
 import { Sticker } from "./Sticker";
 import { SuggestedView } from "./SuggestedView";
 import { TodoView } from "./TodoView";
 
-const VIEWS: [View, string][] = [["todo", "To do"], ["suggested", "Suggested"], ["docs", "Documents"], ["history", "History"], ["cars", "Cars"]];
+const VIEWS: [View, string][] = [["todo", "Maintenance"], ["suggested", "Suggested"], ["docs", "Documents"], ["cars", "Cars"]];
 
 export function App({ account }: { account: React.ReactNode }) {
   const g = useGarage();
@@ -34,7 +33,7 @@ export function App({ account }: { account: React.ReactNode }) {
   const carFilter = ui.car !== "all" && !g.carById(ui.car) ? "all" : ui.car;
   const lateCount = data.tasks.filter((t) => g.carById(t.carId) && (carFilter === "all" || t.carId === carFilter) && status(t, g.carById(t.carId)).rank === 0).length;
 
-  const Body = { todo: TodoView, suggested: SuggestedView, docs: DocsView, history: HistoryView, cars: CarsView }[ui.view];
+  const Body = { todo: TodoView, suggested: SuggestedView, docs: DocsView, cars: CarsView }[ui.view];
 
   return (
     <>
@@ -53,7 +52,6 @@ export function App({ account }: { account: React.ReactNode }) {
         <header className="top">
           <h1>Garage Logbook</h1>
           <div className="top-acts">
-            {cars.length > 0 && <button className="btn ghost sm" onClick={() => g.setView("cars")}>Manage cars</button>}
             {account}
           </div>
         </header>
@@ -66,7 +64,7 @@ export function App({ account }: { account: React.ReactNode }) {
           <>
             {cars.length > 1 && (
               <nav className="tabs" aria-label="Car">
-                {[["all", "Both cars"] as const, ...cars.map((c) => [c.id, c.name] as const)].map(([id, n]) => (
+                {[["all", cars.length === 2 ? "Both cars" : "All cars"] as const, ...cars.map((c) => [c.id, c.name] as const)].map(([id, n]) => (
                   <button key={id} className="tab" aria-pressed={carFilter === id} onClick={() => g.setCar(id)}>{n}</button>
                 ))}
               </nav>
@@ -74,6 +72,7 @@ export function App({ account }: { account: React.ReactNode }) {
             <section className="stickers">
               {cars.filter((c) => carFilter === "all" || c.id === carFilter).map((c) => <Sticker key={c.id} car={c} />)}
             </section>
+            {cars.map((c) => <LookupStatus key={c.id} car={c} />)}
             <nav className="views" aria-label="Section">
               {VIEWS.map(([v, n]) => (
                 <button key={v} className="view" aria-pressed={ui.view === v} onClick={() => g.setView(v)}>

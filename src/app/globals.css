@@ -176,5 +176,11 @@ a{color:var(--accent)}
 #turnstile-slot:empty{display:none}
 .sched-field{grid-column:1 / -1;gap:6px}
 .self-start{align-self:flex-start}
+.self-center{align-self:center}
+.push-r{margin-left:auto}
+.notice{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;padding:10px 14px;border-radius:var(--r);background:var(--accent-soft);color:var(--ink);font-size:.92rem}
+.notice[role="alert"]{background:var(--soon-soft)}
+.notice.reading{flex-wrap:nowrap;justify-content:flex-start}
+.done-group .hist{opacity:.85}
 .finder{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .finder input{flex:1 1 220px;min-width:0;border:1px solid var(--line);border-radius:6px;padding:6px 9px;background:var(--surface)}

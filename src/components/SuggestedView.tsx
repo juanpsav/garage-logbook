@@ -25,7 +25,14 @@ export function SuggestedView() {
     return (
       <>
         <div className="bar">
-          <p className="muted small lede">Common checks with typical intervals. To use your car&apos;s official schedule, pick it under <strong>Cars</strong>. Tap <strong>Add</strong> and say when it was last done; leave that blank if you don&apos;t know and it&apos;ll be due now.</p>
+          <div className="stack lede">
+            <p className="muted small flush">
+              Common checks with typical intervals for the <strong>{car.name}</strong>. Tap <strong>Add</strong> on the ones you want to track and say when they were last done; leave that blank if you don&apos;t know and it&apos;ll be due now.
+            </p>
+            {!g.lookups[car.id] && (
+              <button className="btn sm self-start" onClick={() => g.findForCar(car.id)}>Find the official schedule for this car</button>
+            )}
+          </div>
           {picker}
         </div>
         <SugList items={SUGGESTIONS} car={car} sc={null} />
@@ -38,7 +45,7 @@ export function SuggestedView() {
       <div className="bar">
         <p className="muted small lede">
           Official schedule for the <strong>{sc.name}</strong>, from the{" "}
-          {sc.sourceUrl ? <a href={sc.sourceUrl} target="_blank" rel="noopener">{sc.source}</a> : sc.source}. {sc.note}
+          {sc.sourceUrl ? <a href={sc.sourceUrl} target="_blank" rel="noopener">{sc.source}</a> : sc.source}. {sc.note} Tap <strong>Add</strong> on the ones you want to track.
         </p>
         {picker}
       </div>

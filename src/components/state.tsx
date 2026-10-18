@@ -7,10 +7,14 @@ import { cleanExtraction, DOC_TYPES } from "@/lib/extraction";
 import { acceptable, isPdf, MAX_FILES, MAX_PDF_PAGES, pdfToImages, READ_EDGE, shrink } from "@/lib/files";
 import { findSuggestion, nextAfterDone, scheduleFor, taskFromSuggestion, type LastDone } from "@/lib/logic";
 import { readDocument, ReadError } from "@/lib/read-client";
+import { turnstileToken } from "@/lib/turnstile";
 import { emptyData, StoreError, type Store } from "@/lib/store";
 import type { Car, CollectionName, Collections, Data, Doc, DocType, Schedule, Task } from "@/lib/types";
 
-export type View = "todo" | "suggested" | "docs" | "history" | "cars";
+export type View = "todo" | "suggested" | "docs" | "cars";
+/** Value of the schedule picker that means "look it up for me". */
+export const FIND = "__find";
+export type Lookup = { state: "finding" } | { state: "failed"; msg: string };
 export type Open = { id: string; kind: string; confirm?: boolean } | null;
 
 export type DocForm = {
@@ -30,6 +34,7 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
   const [busy, setBusy] = useState<string | null>(null);
   const [reading, setReading] = useState<Set<string>>(new Set());
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [lookups, setLookups] = useState<Record<string, Lookup>>({});
   const readers = useRef(new Map<string, AbortController>());
   // Latest data for async actions that run across several writes.
   const dataRef = useRef(data);
@@ -89,16 +94,22 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
   const close = () => { setOpen(null); setAdding(false); };
 
   /* ---------- cars ---------- */
+  /** scheduleId may be FIND: the car is added right away and its schedule is looked up in the background. */
   const addCar = async (name: string, km: number, scheduleId: string | null) => {
-    const c: Car = { id: uid(), name, km, kmDate: today(), scheduleId, created: now() };
+    const find = scheduleId === FIND;
+    const c: Car = { id: uid(), name, km, kmDate: today(), scheduleId: find ? null : scheduleId, created: now() };
     await put("cars", c);
-    setView("todo");
-    setCarState("all");
+    // Next step is choosing what to track, which is the Suggested list.
+    setView("suggested");
+    setCarState(c.id);
     toast(`${c.name} added`);
+    if (find) findForCar(c.id);
   };
   const editCar = async (c: Car, name: string, km: number | null, scheduleId: string | null) => {
-    await put("cars", { ...c, name, km: km ?? c.km, kmDate: km != null && km !== c.km ? today() : c.kmDate, scheduleId });
+    const find = scheduleId === FIND;
+    await put("cars", { ...c, name, km: km ?? c.km, kmDate: km != null && km !== c.km ? today() : c.kmDate, scheduleId: find ? c.scheduleId : scheduleId });
     toast("Saved");
+    if (find) findForCar(c.id);
   };
   const setOdometer = async (c: Car, km: number) => {
     if (km === c.km) return;
@@ -149,7 +160,7 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
     toast(`Added to ${c.name}`);
   };
 
-  /* ---------- history ---------- */
+  /* ---------- done work (history) ---------- */
   const addLog = async (e: Omit<Collections["log"], "id" | "created">) => {
     await put("log", { ...e, id: uid(), created: now() });
     setOpen(null);
@@ -302,26 +313,48 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
     toast([logId && "Added to history", taskIds.length && `${taskIds.length} task${taskIds.length === 1 ? "" : "s"} created`].filter(Boolean).join(" · ") || "Saved");
   };
 
-  /* ---------- schedule lookup (owner only) ---------- */
+  /* ---------- schedule lookup ---------- */
   const findSchedule = async (vehicle: string): Promise<Schedule | string> => {
+    let token: string | null = null;
+    try { token = owner ? null : await turnstileToken(); } catch { return "Couldn't confirm you're not a bot. Reload the page and try again."; }
     try {
-      const res = await fetch("/api/vehicles/schedule", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vehicle }) });
+      const res = await fetch("/api/vehicles/schedule", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vehicle, turnstile: token }) });
       const json = await res.json().catch(() => null);
       if (res.ok && json?.schedule) {
         const sc = json.schedule as Schedule;
         setSchedules((list) => [...list.filter((x) => x.id !== sc.id), sc]);
         return sc;
       }
-      return json?.error === "not_found" ? "Couldn't find an official schedule for that vehicle. Check the year, model and engine, or keep the general suggestions."
+      return json?.error === "not_found" ? "Couldn't find an official schedule. Check that the name has the year, make and model, then try again."
         : json?.error === "rate_limited" ? "You've used today's schedule lookups. Try again tomorrow."
+        : json?.error === "busy" ? "Too many lookups today. Try again tomorrow."
+        : json?.error === "bot_check" ? "Couldn't confirm you're not a bot. Reload the page and try again."
         : "The lookup didn't finish. Try again in a minute.";
     } catch {
       return "The lookup didn't finish. Check your connection and try again.";
     }
   };
 
+  /** Looks up a car's schedule from its name and attaches it when found. */
+  const findForCar = async (carId: string) => {
+    const c = carById(carId);
+    if (!c || lookups[carId]?.state === "finding") return;
+    setLookups((m) => ({ ...m, [carId]: { state: "finding" } }));
+    const r = await findSchedule(c.name);
+    const cur = carById(carId);
+    if (typeof r === "string") {
+      setLookups((m) => ({ ...m, [carId]: { state: "failed", msg: r } }));
+      return;
+    }
+    setLookups((m) => { const n = { ...m }; delete n[carId]; return n; });
+    if (!cur) return;
+    await put("cars", { ...cur, scheduleId: r.id });
+    toast(`Found the official schedule for ${cur.name}`);
+  };
+  const dismissLookup = (carId: string) => setLookups((m) => { const n = { ...m }; delete n[carId]; return n; });
+
   return {
-    store, owner, data, loaded, schedules, cars, carById, findSchedule,
+    store, owner, data, loaded, schedules, cars, carById, lookups, findForCar, dismissLookup,
     ui: { car, view, open, adding, busy, reading, toastMsg },
     setCar, setView, setOpen, setAdding, close, toast,
     addCar, editCar, setOdometer, deleteCar,

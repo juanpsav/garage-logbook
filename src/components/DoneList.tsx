@@ -1,11 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { fmtDate, fmtKm, fmtMoney, num, today } from "@/lib/dates";
 import { DOC_TYPES } from "@/lib/extraction";
 import { useGarage } from "./state";
 import { openDoc } from "./TodoView";
 
-export function HistoryView() {
+const SHOWN = 5;
+
+/** Finished work, newest first. Sits under the open tasks on the Maintenance list. */
+export function DoneList() {
   const g = useGarage();
   const { ui } = g;
   const entries = g.data.log
@@ -13,21 +17,24 @@ export function HistoryView() {
     .sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.created || "").localeCompare(a.created || ""));
   const yr = String(new Date().getFullYear());
   const spent = entries.filter((e) => e.date?.startsWith(yr)).reduce((s, e) => s + (e.cost || 0), 0);
+  const [all, setAll] = useState(false);
+  const shown = all ? entries : entries.slice(0, SHOWN);
   return (
-    <>
+    <section className="group done-group">
+      <div className="group-h">
+        <span className="dot" style={{ background: "var(--muted)" }} /><h2>Done</h2>
+        <span className="muted small mono">{entries.length}</span>
+        {spent > 0 && <span className="muted small push-r"><span className="mono">{fmtMoney(spent)}</span> in {yr}</span>}
+      </div>
       <div className="bar">
-        <span className="muted small">
-          {entries.length} entr{entries.length === 1 ? "y" : "ies"}
-          {spent > 0 && <> · <span className="mono">{fmtMoney(spent)}</span> spent in {yr}</>}
-        </span>
-        <button className="btn sm" onClick={() => g.setOpen(ui.open?.id === "newlog" ? null : { id: "newlog", kind: "log" })}>+ Log past work</button>
+        <button className="btn ghost sm" onClick={() => g.setOpen(ui.open?.id === "newlog" ? null : { id: "newlog", kind: "log" })}>+ Log work done before</button>
       </div>
       {ui.open?.id === "newlog" && <LogForm />}
       {!entries.length ? (
-        <div className="empty">Nothing logged yet. When you mark a task done, it shows up here with the date and km.</div>
+        <p className="muted small">Tasks you mark done show up here with the date, km and cost.</p>
       ) : (
         <div className="list">
-          {entries.map((e) => {
+          {shown.map((e) => {
             const car = g.carById(e.carId);
             const doc = e.docId ? g.data.docs.find((d) => d.id === e.docId) : undefined;
             const confirm = ui.open?.id === e.id;
@@ -54,9 +61,12 @@ export function HistoryView() {
               </div>
             );
           })}
+          {entries.length > shown.length && (
+            <button className="btn ghost sm self-start" onClick={() => setAll(true)}>Show all {entries.length}</button>
+          )}
         </div>
       )}
-    </>
+    </section>
   );
 }
 

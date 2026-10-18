@@ -5,6 +5,7 @@ import { now, num, today, uid } from "@/lib/dates";
 import { DOC_TYPES } from "@/lib/extraction";
 import { every, repeats, status, type Status } from "@/lib/logic";
 import type { Task } from "@/lib/types";
+import { DoneList } from "./DoneList";
 import { useGarage } from "./state";
 
 const GROUPS = [[0, "Needs attention", "var(--late)"], [1, "Coming up", "var(--soon)"], [2, "Later", "var(--ok)"], [3, "No due date", "var(--line)"]] as const;
@@ -23,7 +24,10 @@ export function TodoView() {
       </div>
       {ui.adding && <TaskForm />}
       {!ts.length && !ui.adding && (
-        <div className="empty">No tasks yet. Add your own, or open <strong>Suggested</strong> to add regular checks with one tap.</div>
+        <div className="empty stack">
+          <span>Nothing to do yet. Pick the checks you want to track, or add your own task.</span>
+          <button className="btn primary self-center" onClick={() => g.setView("suggested")}>Choose checks to track</button>
+        </div>
       )}
       {GROUPS.map(([r, name, color]) => {
         const grp = ts.filter(([, s]) => s.rank === r).sort((a, b) => a[1].key - b[1].key || a[0].title.localeCompare(b[0].title));
@@ -35,6 +39,7 @@ export function TodoView() {
           </section>
         );
       })}
+      <DoneList />
     </>
   );
 }
@@ -89,7 +94,7 @@ function DoneForm({ task: t }: { task: Task }) {
         <label className="field"><span>Cost ($, optional)</span><input name="cost" inputMode="decimal" /></label>
       </div>
       <label className="field"><span>Note (optional)</span><input name="note" placeholder="Shop, parts, what you found" /></label>
-      <p className="hint">{repeats(t) ? "Saved to history, and the next one gets scheduled." : "Saved to history and removed from the list."}</p>
+      <p className="hint">{repeats(t) ? "Moves to Done, and the next one gets scheduled." : "Moves to Done."}</p>
       <div className="form-acts">
         <button type="button" className="btn ghost" onClick={g.close}>Cancel</button>
         <button className="btn primary">Mark done</button>

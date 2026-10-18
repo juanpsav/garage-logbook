@@ -6,13 +6,17 @@ const envInt = (name: string, fallback: number) => {
   return Number.isFinite(n) && n >= 0 ? n : fallback;
 };
 
-/** Daily document-read limits. All overridable from Vercel's environment settings. */
+/** Daily limits for document reads and schedule lookups. All overridable from Vercel's environment settings. */
 export const LIMITS = {
   guestPerDevice: envInt("READ_LIMIT_GUEST_DEVICE", 5),
   guestPerIp: envInt("READ_LIMIT_GUEST_IP", 10),
   guestTotal: envInt("READ_LIMIT_GUEST_TOTAL", 100),
   owner: envInt("READ_LIMIT_OWNER", 60),
   ownerSchedules: envInt("SCHEDULE_LIMIT_OWNER", 10),
+  // Schedule lookups cost far more than reads (web research with Claude), so guests get few.
+  guestSchedulesPerDevice: envInt("SCHEDULE_LIMIT_GUEST_DEVICE", 2),
+  guestSchedulesPerIp: envInt("SCHEDULE_LIMIT_GUEST_IP", 3),
+  guestSchedulesTotal: envInt("SCHEDULE_LIMIT_GUEST_TOTAL", 15),
 };
 
 const day = () => new Date().toISOString().slice(0, 10);
