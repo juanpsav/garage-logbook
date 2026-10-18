@@ -2,7 +2,8 @@
 
 import { num } from "@/lib/dates";
 import type { Car } from "@/lib/types";
-import { FIND, useGarage } from "./state";
+import { scheduleFor } from "@/lib/logic";
+import { useGarage } from "./state";
 
 export function Welcome() {
   const g = useGarage();
@@ -10,17 +11,17 @@ export function Welcome() {
     <form className="card" onSubmit={(e) => {
       e.preventDefault();
       const d = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
-      g.addCar(d.name.trim(), num(d.km) ?? 0, d.scheduleId || null);
+      g.addCar(d.name.trim(), num(d.km) ?? 0);
     }}>
       <h2 className="ink">Add your first car</h2>
-      <p className="hint">We look up the manufacturer&apos;s maintenance schedule for it, then you pick which checks to track.</p>
+      <p className="hint">We find the manufacturer&apos;s maintenance schedule for it, then you pick which checks to track.</p>
       <CarFields />
       <div className="form-acts"><button className="btn primary">Add car</button></div>
     </form>
   );
 }
 
-/** Name, odometer and schedule fields shared by the add and edit forms. */
+/** Name and odometer fields shared by the add and edit forms. */
 function CarFields({ car }: { car?: Car }) {
   return (
     <div className="fields">
@@ -28,21 +29,20 @@ function CarFields({ car }: { car?: Car }) {
         <input name="name" required defaultValue={car?.name} placeholder="2019 Subaru Forester" />
       </label>
       <label className="field"><span>Odometer (km)</span><input name="km" inputMode="numeric" required={!car} defaultValue={car?.km ?? ""} placeholder="84500" /></label>
-      <ScheduleSelect value={car ? car.scheduleId ?? null : FIND} />
     </div>
   );
 }
 
-function ScheduleSelect({ value }: { value: string | null }) {
+/** Which schedule a car uses, with a way to look it up again. */
+function ScheduleLine({ car }: { car: Car }) {
   const g = useGarage();
+  const sc = scheduleFor(car, g.schedules);
+  const finding = g.lookups[car.id]?.state === "finding";
   return (
-    <label className="field"><span>Maintenance schedule</span>
-      <select name="scheduleId" defaultValue={value ?? ""}>
-        <option value={FIND}>{value === FIND ? "Find it for me" : "Look it up again"}</option>
-        {g.schedules.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        <option value="">None, use common checks</option>
-      </select>
-    </label>
+    <div className="sched-line small">
+      <span className="muted">Schedule: {finding ? "looking it up…" : sc ? sc.name : "common checks"}</span>
+      {!finding && <button type="button" className="btn ghost sm" onClick={() => g.findForCar(car.id, true)}>{sc ? "Look it up again" : "Find the official schedule"}</button>}
+    </div>
   );
 }
 
@@ -83,9 +83,10 @@ export function CarsView() {
             <form key={`${c.id}${c.km}${c.scheduleId}`} className="sug car-row" onSubmit={(e) => {
               e.preventDefault();
               const d = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
-              g.editCar(c, d.name.trim(), num(d.km), d.scheduleId || null);
+              g.editCar(c, d.name.trim(), num(d.km));
             }}>
               <CarFields car={c} />
+              <ScheduleLine car={c} />
               <div className="row-acts">
                 {confirm ? (
                   <>
@@ -106,7 +107,7 @@ export function CarsView() {
       <form className="card" onSubmit={(e) => {
         e.preventDefault();
         const d = Object.fromEntries(new FormData(e.currentTarget)) as Record<string, string>;
-        g.addCar(d.name.trim(), num(d.km) ?? 0, d.scheduleId || null);
+        g.addCar(d.name.trim(), num(d.km) ?? 0);
         e.currentTarget.reset();
       }}>
         <h2 className="ink">Add a car</h2>

@@ -7,18 +7,8 @@
   --f-body:var(--font-body),system-ui,-apple-system,"Segoe UI",sans-serif;
   --f-mono:var(--font-mono),ui-monospace,Menlo,monospace;
   --r:10px;
+  color-scheme:light;
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0f141a; --surface:#18202a; --sunken:#131a22; --ink:#e5eaf0; --muted:#94a2b1; --line:#2a3542;
-  --accent:#6f9fff; --accent-ink:#0b1320; --accent-soft:#1c2a42;
-  --late:#ff7b64; --late-soft:#3a1d19; --soon:#e9b04c; --soon-soft:#352a14; --ok:#5fc48c; --ok-soft:#16301f;
-  color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#0f141a; --surface:#18202a; --sunken:#131a22; --ink:#e5eaf0; --muted:#94a2b1; --line:#2a3542;
-  --accent:#6f9fff; --accent-ink:#0b1320; --accent-soft:#1c2a42;
-  --late:#ff7b64; --late-soft:#3a1d19; --soon:#e9b04c; --soon-soft:#352a14; --ok:#5fc48c; --ok-soft:#16301f;
-  color-scheme:dark}
-
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45}
@@ -168,19 +158,18 @@ button.chip{border:0;cursor:pointer}
 .picker{min-width:160px}
 .inline-check{display:flex;gap:8px;align-items:center}
 .check.two{grid-template-columns:1fr auto}
-.car-row{grid-template-columns:1fr auto}
+.car-row{display:flex;flex-direction:column;align-items:stretch;gap:10px}
+.car-row .row-acts{align-self:flex-end}
 .row-acts{display:flex;gap:6px;align-self:end;flex-wrap:wrap;justify-content:flex-end}
 .top-acts{display:flex;gap:8px;align-items:center}
 .doc-sum{min-width:0}
 a{color:var(--accent)}
 #turnstile-slot:empty{display:none}
-.sched-field{grid-column:1 / -1;gap:6px}
 .self-start{align-self:flex-start}
 .self-center{align-self:center}
+.sched-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .push-r{margin-left:auto}
 .notice{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;padding:10px 14px;border-radius:var(--r);background:var(--accent-soft);color:var(--ink);font-size:.92rem}
 .notice[role="alert"]{background:var(--soon-soft)}
 .notice.reading{flex-wrap:nowrap;justify-content:flex-start}
 .done-group .hist{opacity:.85}
-.finder{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.finder input{flex:1 1 220px;min-width:0;border:1px solid var(--line);border-radius:6px;padding:6px 9px;background:var(--surface)}

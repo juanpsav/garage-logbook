@@ -5,15 +5,13 @@ import seedSchedules from "@/data/schedules.json";
 import { addDays, fmtDate, fmtKm, now, num, today, uid } from "@/lib/dates";
 import { cleanExtraction, DOC_TYPES } from "@/lib/extraction";
 import { acceptable, isPdf, MAX_FILES, MAX_PDF_PAGES, pdfToImages, READ_EDGE, shrink } from "@/lib/files";
-import { findSuggestion, nextAfterDone, scheduleFor, taskFromSuggestion, type LastDone } from "@/lib/logic";
+import { findSuggestion, matchSchedule, nextAfterDone, scheduleFor, taskFromSuggestion, type LastDone } from "@/lib/logic";
 import { readDocument, ReadError } from "@/lib/read-client";
 import { turnstileToken } from "@/lib/turnstile";
 import { emptyData, StoreError, type Store } from "@/lib/store";
 import type { Car, CollectionName, Collections, Data, Doc, DocType, Schedule, Task } from "@/lib/types";
 
 export type View = "todo" | "suggested" | "docs" | "cars";
-/** Value of the schedule picker that means "look it up for me". */
-export const FIND = "__find";
 export type Lookup = { state: "finding" } | { state: "failed"; msg: string };
 export type Open = { id: string; kind: string; confirm?: boolean } | null;
 
@@ -94,22 +92,32 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
   const close = () => { setOpen(null); setAdding(false); };
 
   /* ---------- cars ---------- */
-  /** scheduleId may be FIND: the car is added right away and its schedule is looked up in the background. */
-  const addCar = async (name: string, km: number, scheduleId: string | null) => {
-    const find = scheduleId === FIND;
-    const c: Car = { id: uid(), name, km, kmDate: today(), scheduleId: find ? null : scheduleId, created: now() };
+  /** Uses a saved schedule that matches the name, or looks one up in the background. */
+  const attachSchedule = (c: Car) => {
+    const m = matchSchedule(c.name, schedules);
+    if (m) return m.id;
+    findForCar(c.id);
+    return null;
+  };
+  const addCar = async (name: string, km: number) => {
+    const c: Car = { id: uid(), name, km, kmDate: today(), scheduleId: matchSchedule(name, schedules)?.id ?? null, created: now() };
     await put("cars", c);
     // Next step is choosing what to track, which is the Suggested list.
     setView("suggested");
     setCarState(c.id);
     toast(`${c.name} added`);
-    if (find) findForCar(c.id);
+    if (!c.scheduleId) findForCar(c.id);
   };
-  const editCar = async (c: Car, name: string, km: number | null, scheduleId: string | null) => {
-    const find = scheduleId === FIND;
-    await put("cars", { ...c, name, km: km ?? c.km, kmDate: km != null && km !== c.km ? today() : c.kmDate, scheduleId: find ? c.scheduleId : scheduleId });
+  const editCar = async (c: Car, name: string, km: number | null) => {
+    const renamed = name !== c.name;
+    const n: Car = { ...c, name, km: km ?? c.km, kmDate: km != null && km !== c.km ? today() : c.kmDate };
+    if (renamed) { dismissLookup(c.id); n.scheduleId = null; }
+    await put("cars", n);
     toast("Saved");
-    if (find) findForCar(c.id);
+    if (renamed) {
+      const id = attachSchedule(n);
+      if (id) await put("cars", { ...n, scheduleId: id });
+    }
   };
   const setOdometer = async (c: Car, km: number) => {
     if (km === c.km) return;
@@ -314,11 +322,11 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
   };
 
   /* ---------- schedule lookup ---------- */
-  const findSchedule = async (vehicle: string): Promise<Schedule | string> => {
+  const findSchedule = async (vehicle: string, fresh: boolean): Promise<Schedule | string> => {
     let token: string | null = null;
     try { token = owner ? null : await turnstileToken("schedule"); } catch { return "Couldn't confirm you're not a bot. Reload the page and try again."; }
     try {
-      const res = await fetch("/api/vehicles/schedule", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vehicle, turnstile: token }) });
+      const res = await fetch("/api/vehicles/schedule", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ vehicle, fresh, turnstile: token }) });
       const json = await res.json().catch(() => null);
       if (res.ok && json?.schedule) {
         const sc = json.schedule as Schedule;
@@ -335,12 +343,12 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
     }
   };
 
-  /** Looks up a car's schedule from its name and attaches it when found. */
-  const findForCar = async (carId: string) => {
+  /** Looks up a car's schedule from its name and attaches it when found. `fresh` skips saved schedules. */
+  const findForCar = async (carId: string, fresh = false) => {
     const c = carById(carId);
     if (!c || lookups[carId]?.state === "finding") return;
     setLookups((m) => ({ ...m, [carId]: { state: "finding" } }));
-    const r = await findSchedule(c.name);
+    const r = await findSchedule(c.name, fresh);
     const cur = carById(carId);
     if (typeof r === "string") {
       setLookups((m) => ({ ...m, [carId]: { state: "failed", msg: r } }));

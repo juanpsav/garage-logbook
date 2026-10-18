@@ -67,6 +67,21 @@ export function nextAfterDone(t: Task, date: string, km: number | null, car: Car
 export const scheduleFor = (car: Car | undefined, schedules: Schedule[]) =>
   car?.scheduleId ? schedules.find((s) => s.id === car.scheduleId) ?? null : null;
 
+const words = (s: string) => new Set(s.toLowerCase().replace(/-/g, "").split(/[^a-z0-9.]+/).map((w) => w.replace(/^\.+|\.+$/g, "")).filter(Boolean));
+
+/**
+ * Finds a saved schedule for a car name typed by the owner: same model year, and every word they typed
+ * appears in the schedule's name ("2015 Forester" matches "2015 Subaru Forester 2.5i"). Prefers the closest name.
+ */
+export function matchSchedule(name: string, schedules: Schedule[]): Schedule | undefined {
+  const want = words(name);
+  if (![...want].some((w) => /^(19|20)\d\d$/.test(w))) return undefined;
+  return schedules
+    .map((s) => ({ s, have: words(s.name) }))
+    .filter(({ have }) => [...want].every((w) => have.has(w)))
+    .sort((a, b) => a.have.size - b.have.size)[0]?.s;
+}
+
 export function findSuggestion(key: string, car: Car | undefined, schedules: Schedule[]): ScheduleItem | undefined {
   return scheduleFor(car, schedules)?.items.find((x) => x.key === key) ?? SUGGESTIONS.find((x) => x.key === key);
 }
