@@ -57,9 +57,6 @@ export function App({ account }: { account: React.ReactNode }) {
             {account}
           </div>
         </header>
-        {g.store.kind === "local" && g.loaded && (
-          <div className="banner">Saved in this browser only. Clearing your browser data erases it.</div>
-        )}
 
         {!g.loaded ? (
           <p className="muted">Loading your garage…</p>
