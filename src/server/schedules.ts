@@ -15,10 +15,10 @@ export async function listSchedules(): Promise<Schedule[]> {
 const slug = (s: string) => s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
 
 /**
- * Stores a lookup result in the shared list. The owner's lookup replaces an earlier one of the same
- * vehicle; a guest's keeps the existing one, so guests can't overwrite schedules others rely on.
+ * Stores a lookup result in the shared list. An admin's lookup replaces an earlier one of the same
+ * vehicle; anyone else's keeps the existing one, so they can't overwrite schedules others rely on.
  */
-export async function saveLookup(r: LookupResult, ownerId: string | null): Promise<Schedule> {
+export async function saveLookup(r: LookupResult, userId: string | null, admin: boolean): Promise<Schedule> {
   const id = slug(r.name) || `schedule-${Date.now()}`;
   const used = new Set<string>();
   const schedule: Schedule = {
@@ -46,19 +46,19 @@ export async function saveLookup(r: LookupResult, ownerId: string | null): Promi
   const data: Omit<Schedule, "id"> & { id?: string } = { ...schedule };
   delete data.id;
   if (!hasDb()) return schedule;
-  if (ownerId) {
+  if (admin && userId) {
     await sql(
       `insert into schedules (id, data, created_by) values ($1, $2, $3)
        on conflict (id) do update set data = excluded.data, created_by = excluded.created_by, created_at = now()`,
-      [id, data, ownerId],
+      [id, data, userId],
     );
     return schedule;
   }
   const kept = await sql<{ data: Omit<Schedule, "id"> }>(
-    `insert into schedules (id, data, created_by) values ($1, $2, null)
+    `insert into schedules (id, data, created_by) values ($1, $2, $3)
      on conflict (id) do update set id = schedules.id
      returning data`,
-    [id, data],
+    [id, data, userId],
   );
   return { ...kept[0].data, id };
 }

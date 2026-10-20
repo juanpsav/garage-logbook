@@ -11,13 +11,26 @@ export const LIMITS = {
   guestPerDevice: envInt("READ_LIMIT_GUEST_DEVICE", 5),
   guestPerIp: envInt("READ_LIMIT_GUEST_IP", 10),
   guestTotal: envInt("READ_LIMIT_GUEST_TOTAL", 100),
-  owner: envInt("READ_LIMIT_OWNER", 60),
-  ownerSchedules: envInt("SCHEDULE_LIMIT_OWNER", 10),
+  admin: envInt("READ_LIMIT_ADMIN", 60),
+  adminSchedules: envInt("SCHEDULE_LIMIT_ADMIN", 10),
+  // Anyone can sign up, so signed-in users get modest caps each, plus a cap across all of them.
+  member: envInt("READ_LIMIT_MEMBER", 10),
+  memberTotal: envInt("READ_LIMIT_MEMBER_TOTAL", 100),
+  memberSchedules: envInt("SCHEDULE_LIMIT_MEMBER", 2),
+  memberSchedulesTotal: envInt("SCHEDULE_LIMIT_MEMBER_TOTAL", 10),
+  memberUploads: envInt("UPLOAD_LIMIT_MEMBER", 100),
   // Schedule lookups cost far more than reads (web research with Claude), so guests get few.
   guestSchedulesPerDevice: envInt("SCHEDULE_LIMIT_GUEST_DEVICE", 2),
   guestSchedulesPerIp: envInt("SCHEDULE_LIMIT_GUEST_IP", 3),
   guestSchedulesTotal: envInt("SCHEDULE_LIMIT_GUEST_TOTAL", 15),
 };
+
+/** Daily caps for a signed-in user: their own, plus one shared by all non-admin users. */
+export function userBuckets(kind: string, user: { id: string; admin: boolean }, mine: number, all: number) {
+  return user.admin
+    ? [{ key: `${kind}:admin:${user.id}`, limit: mine }]
+    : [{ key: `${kind}:members`, limit: all }, { key: `${kind}:user:${user.id}`, limit: mine }];
+}
 
 const day = () => new Date().toISOString().slice(0, 10);
 const memory = new Map<string, number>();

@@ -1,6 +1,6 @@
 import { readPrompt, type ReadContext } from "@/lib/extraction";
 import { readWithCohere, UpstreamError } from "@/server/cohere";
-import { LIMITS, take } from "@/server/limits";
+import { LIMITS, take, userBuckets } from "@/server/limits";
 import { getOwner } from "@/server/session";
 import { guestGate } from "@/server/guest";
 
@@ -40,7 +40,8 @@ export async function POST(req: Request) {
 
   const owner = await getOwner();
   if (owner) {
-    if (await take([{ key: `read:owner:${owner.id}`, limit: LIMITS.owner }])) return fail("rate_limited", 429);
+    const over = await take(userBuckets("read", owner, owner.admin ? LIMITS.admin : LIMITS.member, LIMITS.memberTotal));
+    if (over) return fail(over === "read:members" ? "busy" : "rate_limited", 429);
   } else {
     const err = await guestGate("read", String(form.get("turnstile") ?? "") || null, {
       total: LIMITS.guestTotal, perIp: LIMITS.guestPerIp, perDevice: LIMITS.guestPerDevice,

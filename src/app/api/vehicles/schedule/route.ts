@@ -1,5 +1,5 @@
 import { guestGate } from "@/server/guest";
-import { LIMITS, take } from "@/server/limits";
+import { LIMITS, take, userBuckets } from "@/server/limits";
 import { LookupError, lookupSchedule } from "@/server/schedule-lookup";
 import { matchSchedule } from "@/lib/logic";
 import { listSchedules, saveLookup } from "@/server/schedules";
@@ -9,7 +9,7 @@ export const maxDuration = 300;
 
 const fail = (error: string, status: number) => Response.json({ error }, { status });
 
-/** Researches the official schedule for a vehicle and adds it to the shared list. Guests get a few a day. */
+/** Researches the official schedule for a vehicle and adds it to the shared list. Guests and new users get a few a day. */
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const vehicle = typeof body?.vehicle === "string" ? body.vehicle.trim().slice(0, 160) : "";
@@ -21,7 +21,8 @@ export async function POST(req: Request) {
   }
   const owner = await getOwner();
   if (owner) {
-    if (await take([{ key: `schedule:owner:${owner.id}`, limit: LIMITS.ownerSchedules }])) return fail("rate_limited", 429);
+    const over = await take(userBuckets("schedule", owner, owner.admin ? LIMITS.adminSchedules : LIMITS.memberSchedules, LIMITS.memberSchedulesTotal));
+    if (over) return fail(over === "schedule:members" ? "busy" : "rate_limited", 429);
   } else {
     const err = await guestGate("schedule", typeof body?.turnstile === "string" ? body.turnstile : null, {
       total: LIMITS.guestSchedulesTotal, perIp: LIMITS.guestSchedulesPerIp, perDevice: LIMITS.guestSchedulesPerDevice,
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
   try {
     const r = await lookupSchedule(vehicle);
     if (!r.found || !r.items.length) return fail("not_found", 404);
-    return Response.json({ schedule: await saveLookup(r, owner?.id ?? null) });
+    return Response.json({ schedule: await saveLookup(r, owner?.id ?? null, !!owner?.admin) });
   } catch (e) {
     console.error("schedule lookup failed:", e instanceof LookupError ? e.message : e);
     return fail("upstream", 502);

@@ -1,4 +1,5 @@
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import { LIMITS, take } from "@/server/limits";
 import { getOwner, unauthorized } from "@/server/session";
 
 /** Issues a short-lived token so the browser uploads straight to the private Blob store. */
@@ -12,6 +13,7 @@ export async function POST(req: Request) {
       request: req,
       onBeforeGenerateToken: async (pathname) => {
         if (!pathname.startsWith(`u/${owner.id}/`)) throw new Error("bad path");
+        if (!owner.admin && (await take([{ key: `upload:user:${owner.id}`, limit: LIMITS.memberUploads }]))) throw new Error("rate_limited");
         return {
           allowedContentTypes: ["image/jpeg", "application/pdf"],
           maximumSizeInBytes: 20 * 1024 * 1024,

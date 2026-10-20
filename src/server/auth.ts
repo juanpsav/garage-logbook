@@ -2,10 +2,10 @@ import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 import { getPool } from "./db";
 
-/** Emails allowed to sign in, from ALLOWED_EMAILS (comma-separated). Nobody else can create an account. */
-export const isAllowed = (email: string | null | undefined) =>
+/** Anyone can sign up. Emails in ADMIN_EMAILS (comma-separated; ALLOWED_EMAILS is its old name) get the higher daily limits. */
+export const isAdmin = (email: string | null | undefined) =>
   !!email &&
-  (process.env.ALLOWED_EMAILS ?? "")
+  (process.env.ADMIN_EMAILS ?? process.env.ALLOWED_EMAILS ?? "")
     .split(",")
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean)
@@ -27,9 +27,6 @@ function createAuth() {
       },
     },
     session: { expiresIn: 60 * 60 * 24 * 30, updateAge: 60 * 60 * 24 },
-    databaseHooks: {
-      user: { create: { before: async (user) => isAllowed(user.email) } },
-    },
     plugins: [nextCookies()],
   });
 }
