@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { fmtDate, fmtKm, fmtMoney, today } from "@/lib/dates";
 import { DOC_TYPES } from "@/lib/extraction";
+import { MAX_FILES } from "@/lib/files";
 import { status } from "@/lib/logic";
 import type { Doc, DocType } from "@/lib/types";
 import { useGarage, type DocForm } from "./state";
@@ -15,23 +16,32 @@ export function DocsView() {
     .sort((a, b) => (b.created || "").localeCompare(a.created || ""));
   return (
     <>
-      <div className="bar">
-        <p className="muted small lede">
-          Snap a receipt, quote or inspection report. It gets read automatically and turned into history entries and tasks; nothing is saved until you review it.
-          Pick several photos at once for a multi-page document. On a computer you can also drop files here or paste a screenshot.
-        </p>
-        <button className="btn primary" onClick={() => input.current?.click()}>Scan or upload</button>
-        <input
-          ref={input}
-          type="file"
-          accept="image/*,application/pdf"
-          multiple
-          hidden
-          onChange={(e) => { const fl = [...(e.target.files ?? [])]; e.target.value = ""; g.handleFiles(fl); }}
-        />
-      </div>
+      {g.owner ? (
+        <div className="bar">
+          <p className="muted small lede">
+            Snap a receipt, quote or inspection report. It gets read automatically and turned into history entries and tasks; nothing is saved until you review it.
+            Several pages? Pick them all at once, or tap Add page on the document after each photo. On a computer you can also drop files here or paste a screenshot.
+          </p>
+          <button className="btn primary" onClick={() => input.current?.click()}>Scan or upload</button>
+          <input
+            ref={input}
+            type="file"
+            accept="image/*,application/pdf"
+            multiple
+            hidden
+            onChange={(e) => { const fl = [...(e.target.files ?? [])]; e.target.value = ""; g.handleFiles(fl); }}
+          />
+        </div>
+      ) : (
+        <div className="bar">
+          <p className="muted small lede">
+            Sign in to scan receipts, quotes and inspection reports. They&apos;re read automatically and turned into history entries and tasks.
+          </p>
+          {g.signIn && <button className="btn primary" onClick={g.signIn}>Sign in with Google</button>}
+        </div>
+      )}
       {g.ui.busy && <div className="card"><span className="reading"><span className="spin" />{g.ui.busy}</span></div>}
-      {!docs.length && !g.ui.busy && <div className="empty">No documents yet. Scan your last oil change receipt or a shop quote to try it.</div>}
+      {!docs.length && !g.ui.busy && g.owner && <div className="empty">No documents yet. Scan your last oil change receipt or a shop quote to try it.</div>}
       <div className="docs">{docs.map((d) => <DocCard key={d.id} doc={d} />)}</div>
     </>
   );
@@ -87,7 +97,21 @@ function DocCard({ doc: d }: { doc: Doc }) {
       </button>
       {open && (
         <div className="doc-body">
-          <div className="pages">{d.files.map((f, i) => <Page key={f.id} id={f.id} type={f.type} n={i + 1} />)}</div>
+          <div className="pages">
+            {d.files.map((f, i) => <Page key={f.id} id={f.id} type={f.type} n={i + 1} />)}
+            {g.owner && !reading && d.status !== "saved" && d.files.length < MAX_FILES && (
+              <label className="pdf add-page">
+                + Add page
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  multiple
+                  hidden
+                  onChange={(e) => { const fl = [...(e.target.files ?? [])]; e.target.value = ""; g.addPages(d.id, fl); }}
+                />
+              </label>
+            )}
+          </div>
           {reading ? (
             <div className="reading">
               <span className="spin" />Reading this document. It usually takes under a minute.

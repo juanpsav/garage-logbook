@@ -8,9 +8,6 @@ const envInt = (name: string, fallback: number) => {
 
 /** Daily limits for document reads and schedule lookups. All overridable from Vercel's environment settings. */
 export const LIMITS = {
-  guestPerDevice: envInt("READ_LIMIT_GUEST_DEVICE", 3),
-  guestPerIp: envInt("READ_LIMIT_GUEST_IP", 5),
-  guestTotal: envInt("READ_LIMIT_GUEST_TOTAL", 30),
   admin: envInt("READ_LIMIT_ADMIN", 60),
   adminSchedules: envInt("SCHEDULE_LIMIT_ADMIN", 10),
   // Anyone can sign up, so signed-in users get modest caps each, plus a cap across all of them.

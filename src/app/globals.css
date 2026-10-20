@@ -132,6 +132,7 @@ form.card,.card{background:var(--surface);border:1px solid var(--line);border-ra
 .pages a{flex:none}
 .pages img{height:150px;width:auto;max-width:none;border-radius:6px;border:1px solid var(--line);display:block}
 .pages .pdf{height:150px;width:110px;border-radius:6px;border:1px solid var(--line);display:grid;place-items:center;background:var(--sunken);color:var(--accent);font-weight:600;text-decoration:none}
+.pages .add-page{flex:none;cursor:pointer;border-style:dashed;text-align:center;padding:0 8px}
 .sect{display:flex;flex-direction:column;gap:6px}
 .sect h3{font-size:.95rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .checks{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;background:var(--surface)}

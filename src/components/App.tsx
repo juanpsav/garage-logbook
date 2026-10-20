@@ -20,7 +20,7 @@ export function App({ account }: { account: React.ReactNode }) {
   // Paste a screenshot while on Documents.
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
-      if (ui.view !== "docs" || (e.target as HTMLElement)?.closest?.("input,textarea")) return;
+      if (ui.view !== "docs" || !g.owner || (e.target as HTMLElement)?.closest?.("input,textarea")) return;
       const fl = [...(e.clipboardData?.files ?? [])].filter(acceptable);
       if (!fl.length) return;
       e.preventDefault();
@@ -39,12 +39,12 @@ export function App({ account }: { account: React.ReactNode }) {
     <>
       <div
         className={`wrap${dropping ? " dropping" : ""}`}
-        onDragOver={(e) => { if (!e.dataTransfer.types.includes("Files") || !cars.length) return; e.preventDefault(); setDropping(true); }}
+        onDragOver={(e) => { if (!e.dataTransfer.types.includes("Files") || !cars.length || !g.owner) return; e.preventDefault(); setDropping(true); }}
         onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropping(false); }}
         onDrop={(e) => {
           setDropping(false);
           const fl = [...e.dataTransfer.files].filter(acceptable);
-          if (!fl.length || !cars.length) return;
+          if (!fl.length || !cars.length || !g.owner) return;
           e.preventDefault();
           g.handleFiles(fl);
         }}

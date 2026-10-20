@@ -4,7 +4,7 @@
 // a transparent PNG flattened onto nothing comes out black, and the reader sees an empty page.
 
 export const MAX_FILES = 8;
-export const MAX_PDF_PAGES = 4;
+export const MAX_READ_PAGES = 8;
 export const READ_EDGE = 1600;
 
 export const isPdf = (f: File | Blob) => f.type === "application/pdf" || ("name" in f && /\.pdf$/i.test(f.name));
@@ -27,7 +27,7 @@ export async function shrink(blob: Blob, max: number) {
   return toJpeg(c);
 }
 
-export async function pdfToImages(blob: Blob, maxPages = MAX_PDF_PAGES) {
+export async function pdfToImages(blob: Blob, maxPages = MAX_READ_PAGES) {
   const pdfjs = await import("pdfjs-dist");
   pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
   const pdf = await pdfjs.getDocument({ data: new Uint8Array(await blob.arrayBuffer()) }).promise;

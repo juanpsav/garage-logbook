@@ -2,11 +2,10 @@ import { readPrompt, type ReadContext } from "@/lib/extraction";
 import { readWithCohere, UpstreamError } from "@/server/cohere";
 import { LIMITS, take, userBuckets } from "@/server/limits";
 import { getOwner } from "@/server/session";
-import { guestGate } from "@/server/guest";
 
 export const maxDuration = 60;
 
-const MAX_PAGES = 4;
+const MAX_PAGES = 8;
 const MAX_PAGE_BYTES = 1_500_000;
 
 const fail = (error: string, status: number) => Response.json({ error }, { status });
@@ -38,16 +37,11 @@ export async function POST(req: Request) {
   try { ctx = cleanContext(JSON.parse(String(form.get("context") ?? ""))); } catch { /* invalid */ }
   if (!ctx) return fail("bad_request", 400);
 
+  // Reading needs an account, so every read counts against a person's daily limit.
   const owner = await getOwner();
-  if (owner) {
-    const over = await take(userBuckets("read", owner, owner.admin ? LIMITS.admin : LIMITS.member, LIMITS.memberTotal));
-    if (over) return fail(over === "read:members" ? "busy" : "rate_limited", 429);
-  } else {
-    const err = await guestGate("read", String(form.get("turnstile") ?? "") || null, {
-      total: LIMITS.guestTotal, perIp: LIMITS.guestPerIp, perDevice: LIMITS.guestPerDevice,
-    });
-    if (err) return fail(err, err === "bot_check" ? 403 : 429);
-  }
+  if (!owner) return fail("unauthorized", 401);
+  const over = await take(userBuckets("read", owner, owner.admin ? LIMITS.admin : LIMITS.member, LIMITS.memberTotal));
+  if (over) return fail(over === "read:members" ? "busy" : "rate_limited", 429);
 
   try {
     const buffers = await Promise.all(pages.map(async (p) => Buffer.from(await p.arrayBuffer())));

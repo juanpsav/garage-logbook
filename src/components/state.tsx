@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import seedSchedules from "@/data/schedules.json";
 import { addDays, fmtDate, fmtKm, now, num, today, uid } from "@/lib/dates";
 import { cleanExtraction, DOC_TYPES } from "@/lib/extraction";
-import { acceptable, isPdf, MAX_FILES, MAX_PDF_PAGES, pdfToImages, READ_EDGE, shrink } from "@/lib/files";
+import { acceptable, isPdf, MAX_FILES, MAX_READ_PAGES, pdfToImages, READ_EDGE, shrink } from "@/lib/files";
 import { findSuggestion, matchSchedule, nextAfterDone, scheduleFor, taskFromSuggestion, type LastDone } from "@/lib/logic";
 import { readDocument, ReadError } from "@/lib/read-client";
 import { turnstileToken } from "@/lib/turnstile";
@@ -21,7 +21,7 @@ export type DocForm = {
   recs: Record<number, { on: boolean; title: string; urgency: "now" | "soon" | "later" }>;
 };
 
-function useGarageState(store: Store, owner: { id: string; email: string } | null) {
+function useGarageState(store: Store, owner: { id: string; email: string } | null, signIn: (() => void) | null) {
   const [data, setData] = useState<Data>(emptyData);
   const [loaded, setLoaded] = useState(false);
   const [schedules, setSchedules] = useState<Schedule[]>(seedSchedules as Schedule[]);
@@ -207,11 +207,8 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
     await put("docs", { ...cur, status: "review", ex: c, carId: cur.carId || c.carId || null, readError: err });
   };
 
-  const handleFiles = async (list: File[]) => {
-    const files = list.filter(acceptable).slice(0, MAX_FILES);
-    if (!files.length) return;
-    setViewState("docs");
-    setAdding(false);
+  /** Saves photos and PDFs to the store and prepares the pages to read. Null (after a toast) on failure. */
+  const storeFiles = async (files: File[]) => {
     setBusy(files.length > 1 ? `Saving ${files.length} files…` : "Saving…");
     const stored: Doc["files"] = [], pages: Blob[] = [];
     let thumb: string | null = null;
@@ -220,7 +217,7 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
         if (isPdf(f)) {
           stored.push({ id: await store.putFile(f, "application/pdf"), type: "application/pdf" });
           try {
-            const imgs = await pdfToImages(f, MAX_PDF_PAGES);
+            const imgs = await pdfToImages(f, MAX_READ_PAGES);
             pages.push(...imgs);
             if (!thumb && imgs[0]) thumb = await store.putFile(await shrink(imgs[0], 400), "image/jpeg");
           } catch { /* stored, just not readable */ }
@@ -234,28 +231,58 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
         }
       }
     } catch (e) {
-      setBusy(null);
       const code = e instanceof StoreError ? e.code : "";
       toast(code === "decode" ? "Couldn't open that image. Try a JPEG or PNG, or take the photo again."
         : code === "quota" ? "Storage is full. Delete some old documents."
         : code === "too_large" ? "That file is too large."
         : "Couldn't save the file. Check your connection and try again.");
-      return;
+      return null;
+    } finally {
+      setBusy(null);
     }
+    return { stored, pages, thumb };
+  };
+
+  const handleFiles = async (list: File[]) => {
+    const files = list.filter(acceptable).slice(0, MAX_FILES);
+    if (!files.length) return;
+    setViewState("docs");
+    setAdding(false);
+    const saved = await storeFiles(files);
+    if (!saved) return;
+    const { stored, pages, thumb } = saved;
     const doc: Doc = { id: uid(), created: now(), files: stored, thumb, carId: car !== "all" ? car : null, status: pages.length ? "reading" : "review", ex: {} };
-    setBusy(null);
     setOpen({ id: doc.id, kind: "doc" });
     if (pages.length) {
       readers.current.set(doc.id, new AbortController());
       setReading((s) => new Set(s).add(doc.id));
     }
     await put("docs", doc);
-    if (pages.length) readDoc(doc.id, pages.slice(0, MAX_PDF_PAGES));
+    if (pages.length) readDoc(doc.id, pages.slice(0, MAX_READ_PAGES));
+  };
+
+  /** Adds pages photographed separately to a document under review, then reads it again as a whole. */
+  const addPages = async (id: string, list: File[]) => {
+    const d = dataRef.current.docs.find((x) => x.id === id);
+    if (!d) return;
+    const room = MAX_FILES - d.files.length;
+    const files = list.filter(acceptable).slice(0, Math.max(0, room));
+    if (!files.length) {
+      if (room <= 0) toast(`A document holds up to ${MAX_FILES} files.`);
+      return;
+    }
+    const saved = await storeFiles(files);
+    if (!saved) return;
+    await readAgain({ ...d, files: [...d.files, ...saved.stored], thumb: d.thumb ?? saved.thumb });
   };
 
   const rereadDoc = async (id: string) => {
     const d = dataRef.current.docs.find((x) => x.id === id);
-    if (!d) return;
+    if (d) await readAgain(d);
+  };
+
+  const readAgain = async (d: Doc) => {
+    const id = d.id;
     readers.current.set(id, new AbortController());
     setReading((s) => new Set(s).add(id));
     await put("docs", { ...d, status: "reading", readError: null });
@@ -272,7 +299,7 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
       await put("docs", { ...d, status: "review", readError: "Couldn't load the photos to read them again." });
       return;
     }
-    readDoc(id, pages.slice(0, MAX_PDF_PAGES));
+    readDoc(id, pages.slice(0, MAX_READ_PAGES));
   };
 
   const stopRead = (id: string) => readers.current.get(id)?.abort();
@@ -368,15 +395,17 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
     addCar, editCar, setOdometer, deleteCar,
     markDone, saveTasks, deleteTask, addSuggestion,
     addLog, deleteLog,
-    handleFiles, rereadDoc, stopRead, deleteDoc, saveDoc,
+    handleFiles, addPages, rereadDoc, stopRead, deleteDoc, saveDoc, signIn,
   };
 }
 
 export type Garage = ReturnType<typeof useGarageState>;
 const Ctx = createContext<Garage | null>(null);
 
-export function GarageProvider({ store, owner, children }: { store: Store; owner: { id: string; email: string } | null; children: React.ReactNode }) {
-  const g = useGarageState(store, owner);
+export function GarageProvider({ store, owner, signIn, children }: {
+  store: Store; owner: { id: string; email: string } | null; signIn: (() => void) | null; children: React.ReactNode;
+}) {
+  const g = useGarageState(store, owner, signIn);
   return <Ctx.Provider value={g}>{children}</Ctx.Provider>;
 }
 

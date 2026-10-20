@@ -1,6 +1,6 @@
 "use client";
 
-// Cloudflare Turnstile, run on demand right before a document read or schedule lookup. Invisible for most people;
+// Cloudflare Turnstile, run on demand right before a guest's schedule lookup. Invisible for most people;
 // shows a small check only when Cloudflare isn't sure. No site key configured = no check (local dev).
 
 type TurnstileApi = {
@@ -27,8 +27,8 @@ function load() {
   return ready;
 }
 
-/** Gets a fresh single-use token for `action`, which the server checks ("read" or "schedule"). */
-export async function turnstileToken(action: "read" | "schedule"): Promise<string | null> {
+/** Gets a fresh single-use token for `action`, which the server checks. */
+export async function turnstileToken(action: "schedule"): Promise<string | null> {
   if (!SITE_KEY) return null;
   const ts = await load();
   const el = document.getElementById("turnstile-slot");
