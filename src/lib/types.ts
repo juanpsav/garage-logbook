@@ -89,7 +89,7 @@ export type Doc = {
   files: StoredFile[];
   thumb: string | null;
   carId: string | null;
-  status: "reading" | "review" | "saved";
+  status: "draft" | "reading" | "review" | "saved";
   ex: Partial<Extraction>;
   readError?: string | null;
   // Filled in when saved:

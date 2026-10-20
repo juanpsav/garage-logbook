@@ -20,7 +20,7 @@ export function DocsView() {
         <div className="bar">
           <p className="muted small lede">
             Snap a receipt, quote or inspection report. It gets read automatically and turned into history entries and tasks; nothing is saved until you review it.
-            Several pages? Pick them all at once, or tap Add page on the document after each photo. On a computer you can also drop files here or paste a screenshot.
+            Several pages? Pick them all at once, or take one photo, then tap Add page for each of the others. On a computer you can also drop files here or paste a screenshot.
           </p>
           <button className="btn primary" onClick={() => input.current?.click()}>Scan or upload</button>
           <input
@@ -90,7 +90,9 @@ function DocCard({ doc: d }: { doc: Doc }) {
             {car && g.cars.length > 1 && <span className="chip car">{car.name}</span>}
             {date && <span className="chip">{fmtDate(date)}</span>}
             {total != null && <span className="chip">{fmtMoney(Number(total))}</span>}
-            {reading ? <span className="chip soon">Reading…</span> : d.status !== "saved" && <span className="chip soon">Needs review</span>}
+            {reading ? <span className="chip soon">Reading…</span>
+              : d.status === "draft" ? <span className="chip soon">Not read yet</span>
+              : d.status !== "saved" && <span className="chip soon">Needs review</span>}
           </span>
         </span>
         <span className="muted" aria-hidden="true">{open ? "▴" : "▾"}</span>
@@ -117,10 +119,35 @@ function DocCard({ doc: d }: { doc: Doc }) {
               <span className="spin" />Reading this document. It usually takes under a minute.
               <button className="btn sm" onClick={() => g.stopRead(d.id)}>Stop</button>
             </div>
-          ) : d.status === "saved" ? <SavedDoc doc={d} /> : <ReviewForm key={JSON.stringify(d.ex)} doc={d} />}
+          ) : d.status === "saved" ? <SavedDoc doc={d} />
+            : d.status === "draft" ? <DraftDoc doc={d} />
+            : <ReviewForm key={JSON.stringify(d.ex)} doc={d} />}
         </div>
       )}
     </div>
+  );
+}
+
+function DraftDoc({ doc: d }: { doc: Doc }) {
+  const g = useGarage();
+  const confirm = g.ui.open?.confirm;
+  return (
+    <>
+      <p className="small flush">
+        {d.files.length === 1 ? "1 page so far." : `${d.files.length} pages so far.`} More pages? Tap Add page for each one, then Read it.
+      </p>
+      <div className="form-acts">
+        {confirm ? (
+          <>
+            <span className="hint center">Delete this document and its photos?</span>
+            <button className="btn danger" onClick={() => g.deleteDoc(d.id)}>Yes, delete</button>
+          </>
+        ) : (
+          <button className="btn ghost push" onClick={() => g.setOpen({ id: d.id, kind: "doc", confirm: true })}>Delete</button>
+        )}
+        <button className="btn primary" onClick={() => g.rereadDoc(d.id)}>Read it</button>
+      </div>
+    </>
   );
 }
 

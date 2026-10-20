@@ -250,8 +250,11 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
     setAdding(false);
     const saved = await storeFiles(files);
     if (!saved) return;
-    const { stored, pages, thumb } = saved;
-    const doc: Doc = { id: uid(), created: now(), files: stored, thumb, carId: car !== "all" ? car : null, status: pages.length ? "reading" : "review", ex: {} };
+    const { stored, thumb } = saved;
+    // One photo is often the first page of several taken with the camera: wait for more pages before reading.
+    const pages = files.length === 1 && !isPdf(files[0]) ? [] : saved.pages;
+    const status: Doc["status"] = pages.length ? "reading" : saved.pages.length ? "draft" : "review";
+    const doc: Doc = { id: uid(), created: now(), files: stored, thumb, carId: car !== "all" ? car : null, status, ex: {} };
     setOpen({ id: doc.id, kind: "doc" });
     if (pages.length) {
       readers.current.set(doc.id, new AbortController());
@@ -261,7 +264,7 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
     if (pages.length) readDoc(doc.id, pages.slice(0, MAX_READ_PAGES));
   };
 
-  /** Adds pages photographed separately to a document under review, then reads it again as a whole. */
+  /** Adds pages photographed separately. A draft waits for Read it; a document already read is read again as a whole. */
   const addPages = async (id: string, list: File[]) => {
     const d = dataRef.current.docs.find((x) => x.id === id);
     if (!d) return;
@@ -273,7 +276,9 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
     }
     const saved = await storeFiles(files);
     if (!saved) return;
-    await readAgain({ ...d, files: [...d.files, ...saved.stored], thumb: d.thumb ?? saved.thumb });
+    const next: Doc = { ...d, files: [...d.files, ...saved.stored], thumb: d.thumb ?? saved.thumb };
+    if (d.status === "draft") await put("docs", next);
+    else await readAgain(next);
   };
 
   const rereadDoc = async (id: string) => {
