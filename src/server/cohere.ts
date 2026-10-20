@@ -4,6 +4,36 @@ const MODEL = process.env.COHERE_MODEL || "command-a-plus-05-2026";
 
 export class UpstreamError extends Error {}
 
+const str = { type: ["string", "null"] };
+const numb = { type: ["number", "null"] };
+const date = { type: ["string", "null"], format: "date" };
+
+/** Holds the reply to the shape cleanExtraction expects. */
+const SCHEMA = {
+  type: "object",
+  required: ["type", "carId", "title", "date", "shop", "km", "total", "summary", "workDone", "recommended", "completes"],
+  properties: {
+    type: { type: "string", enum: ["receipt", "quote", "inspection", "other"] },
+    carId: str, title: str, date, shop: str, km: numb, total: numb, summary: str,
+    workDone: {
+      type: "array",
+      items: { type: "object", required: ["title", "lineCosts"], properties: { title: { type: "string" }, lineCosts: { type: "array", items: { type: "number" } } } },
+    },
+    recommended: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["title", "urgency", "dueKm", "dueDate", "estCost", "notes"],
+        properties: {
+          title: { type: "string" }, urgency: { type: "string", enum: ["now", "soon", "later"] },
+          dueKm: numb, dueDate: date, estCost: numb, notes: { type: "string" },
+        },
+      },
+    },
+    completes: { type: "array", items: { type: "string" } },
+  },
+};
+
 /** Asks Command A+ to read JPEG pages with a fixed prompt and returns the parsed JSON reply. */
 export async function readWithCohere(prompt: string, pages: Buffer[], signal?: AbortSignal): Promise<unknown> {
   const key = process.env.COHERE_API_KEY;
@@ -14,13 +44,16 @@ export async function readWithCohere(prompt: string, pages: Buffer[], signal?: A
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 6000,
-      response_format: { type: "json_object" },
+      max_tokens: 8000,
+      // Reasoning sometimes runs on and uses up every token before the answer; cap it.
+      thinking: { type: "enabled", token_budget: 3000 },
+      temperature: 0.1,
+      response_format: { type: "json_object", json_schema: SCHEMA },
       messages: [{
         role: "user",
         content: [
           { type: "text", text: prompt },
-          ...pages.map((p) => ({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${p.toString("base64")}` } })),
+          ...pages.map((p) => ({ type: "image_url", image_url: { url: `data:image/jpeg;base64,${p.toString("base64")}`, detail: "high" } })),
         ],
       }],
     }),
