@@ -174,6 +174,11 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
     setOpen(null);
     toast("Saved to history");
   };
+  const updateLog = async (e: Collections["log"]) => {
+    await put("log", e);
+    setOpen(null);
+    toast("Entry updated");
+  };
   const deleteLog = async (id: string) => { setOpen(null); await del("log", id); toast("Entry deleted"); };
 
   /* ---------- documents ---------- */
@@ -399,7 +404,7 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
     setCar, setView, setOpen, setAdding, close, toast,
     addCar, editCar, setOdometer, deleteCar,
     markDone, saveTasks, deleteTask, addSuggestion,
-    addLog, deleteLog,
+    addLog, updateLog, deleteLog,
     handleFiles, addPages, rereadDoc, stopRead, deleteDoc, saveDoc, signIn,
   };
 }
