@@ -1,11 +1,9 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
-import { Barlow, Barlow_Semi_Condensed, IBM_Plex_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const body = Barlow({ variable: "--font-body", subsets: ["latin"], weight: ["400", "500", "600"] });
-const display = Barlow_Semi_Condensed({ variable: "--font-display", subsets: ["latin"], weight: ["500", "600", "700"] });
-const mono = IBM_Plex_Mono({ variable: "--font-mono", subsets: ["latin"], weight: ["400", "500"] });
+const body = Inter({ variable: "--font-body", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Garage Logbook",
@@ -17,13 +15,13 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#eceff3",
+  themeColor: "#f6f6f7",
   colorScheme: "light",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${body.variable} ${display.variable} ${mono.variable}`}>
+    <html lang="en" className={body.variable}>
       <body>
         {children}
         <Analytics />
