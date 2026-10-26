@@ -15,6 +15,8 @@ export type View = "todo" | "suggested" | "docs" | "cars";
 export type Lookup = { state: "finding" } | { state: "failed"; msg: string };
 export type Open = { id: string; kind: string; confirm?: boolean } | null;
 
+export type DocEdit = { type: DocType; carId: string; title: string; date: string; shop: string; km: string; total: string; summary: string };
+
 export type DocForm = {
   type: DocType; carId: string; title: string; date: string; shop: string; km: string; total: string;
   addLog: boolean; done: Record<string, boolean>;
@@ -325,6 +327,22 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
     toast("Document deleted");
   };
 
+  /** Edits a saved document's details and keeps the history entry it made in step. */
+  const updateDoc = async (doc: Doc, f: DocEdit) => {
+    const c = carById(f.carId);
+    if (!c) { toast("Choose which car this is for."); return; }
+    const info = { type: f.type, title: f.title.trim(), date: f.date || today(), shop: f.shop.trim() || null, km: num(f.km), total: num(f.total), summary: f.summary.trim() || null };
+    const log = doc.logId ? dataRef.current.log.find((e) => e.id === doc.logId) : undefined;
+    if (log) {
+      // The entry's note starts with the shop name when it was made; swap in the new one.
+      const note = doc.shop && log.note.startsWith(doc.shop) ? (info.shop ?? "") + log.note.slice(doc.shop.length) : log.note;
+      await put("log", { ...log, carId: c.id, title: info.title, date: info.date, km: info.km, cost: info.total, note: note.replace(/^ · /, "") });
+    }
+    await bumpOdometer(c, info.km, info.date);
+    await put("docs", { ...doc, ...info, carId: c.id });
+    setOpen({ id: doc.id, kind: "doc" });
+    toast(log ? "Document and history entry updated" : "Document updated");
+  };
   const saveDoc = async (doc: Doc, f: DocForm) => {
     const ex = doc.ex, c = carById(f.carId), T = today();
     if (!c) { toast("Choose which car this is for."); return; }
@@ -405,7 +423,7 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
     addCar, editCar, setOdometer, deleteCar,
     markDone, saveTasks, deleteTask, addSuggestion,
     addLog, updateLog, deleteLog,
-    handleFiles, addPages, rereadDoc, stopRead, deleteDoc, saveDoc, signIn,
+    handleFiles, addPages, rereadDoc, stopRead, deleteDoc, saveDoc, updateDoc, signIn,
   };
 }
 

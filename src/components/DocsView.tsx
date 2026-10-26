@@ -6,7 +6,7 @@ import { DOC_TYPES } from "@/lib/extraction";
 import { MAX_FILES } from "@/lib/files";
 import { status } from "@/lib/logic";
 import type { Doc, DocType } from "@/lib/types";
-import { useGarage, type DocForm } from "./state";
+import { useGarage, type DocEdit, type DocForm } from "./state";
 
 export function DocsView() {
   const g = useGarage();
@@ -154,6 +154,8 @@ function DraftDoc({ doc: d }: { doc: Doc }) {
 function SavedDoc({ doc: d }: { doc: Doc }) {
   const g = useGarage();
   const confirm = g.ui.open?.confirm;
+  const [editing, setEditing] = useState(false);
+  if (editing) return <EditDoc doc={d} done={() => setEditing(false)} />;
   const made = (d.taskIds || []).map((id) => g.data.tasks.find((t) => t.id === id)).filter((t) => !!t);
   return (
     <>
@@ -177,10 +179,56 @@ function SavedDoc({ doc: d }: { doc: Doc }) {
             <button className="btn ghost" onClick={g.close}>Keep</button>
           </>
         ) : (
-          <button className="btn ghost" onClick={() => g.setOpen({ id: d.id, kind: "doc", confirm: true })}>Delete document</button>
+          <>
+            <button className="btn ghost push" onClick={() => g.setOpen({ id: d.id, kind: "doc", confirm: true })}>Delete document</button>
+            <button className="btn" onClick={() => setEditing(true)}>Edit</button>
+          </>
         )}
       </div>
     </>
+  );
+}
+
+function EditDoc({ doc: d, done }: { doc: Doc; done: () => void }) {
+  const g = useGarage();
+  const [f, setF] = useState<DocEdit>(() => ({
+    type: (d.type || d.ex.type || "other") as DocType,
+    carId: d.carId || "",
+    title: d.title || "",
+    date: d.date || today(),
+    shop: d.shop || "",
+    km: d.km != null ? String(d.km) : "",
+    total: d.total != null ? String(d.total) : "",
+    summary: d.summary || "",
+  }));
+  const set = <K extends keyof DocEdit>(k: K, v: DocEdit[K]) => setF((x) => ({ ...x, [k]: v }));
+  return (
+    <form className="stack" onSubmit={async (e) => { e.preventDefault(); await g.updateDoc(d, f); done(); }}>
+      <div className="fields">
+        <label className="field"><span>Type</span>
+          <select value={f.type} onChange={(e) => set("type", e.target.value as DocType)}>
+            {Object.entries(DOC_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+        </label>
+        <label className="field"><span>Car</span>
+          <select value={f.carId} required onChange={(e) => set("carId", e.target.value)}>
+            <option value="">Choose…</option>
+            {g.cars.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </label>
+        <label className="field wide"><span>Title</span><input value={f.title} required onChange={(e) => set("title", e.target.value)} /></label>
+        <label className="field"><span>Date</span><input type="date" value={f.date} onChange={(e) => set("date", e.target.value)} /></label>
+        <label className="field"><span>Shop</span><input value={f.shop} onChange={(e) => set("shop", e.target.value)} /></label>
+        <label className="field"><span>Odometer (km)</span><input inputMode="numeric" value={f.km} onChange={(e) => set("km", e.target.value)} /></label>
+        <label className="field"><span>Total ($)</span><input inputMode="decimal" value={f.total} onChange={(e) => set("total", e.target.value)} /></label>
+        <label className="field wide"><span>Summary</span><textarea rows={3} value={f.summary} onChange={(e) => set("summary", e.target.value)} /></label>
+      </div>
+      {d.logId && <p className="small muted flush">The history entry from this document gets the same title, date, km and total.</p>}
+      <div className="form-acts">
+        <button type="button" className="btn ghost push" onClick={done}>Cancel</button>
+        <button className="btn primary">Save changes</button>
+      </div>
+    </form>
   );
 }
 
