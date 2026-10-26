@@ -13,7 +13,8 @@ export function DocsView() {
   const input = useRef<HTMLInputElement>(null);
   const docs = g.data.docs
     .filter((d) => g.ui.car === "all" || !d.carId || d.carId === g.ui.car)
-    .sort((a, b) => (b.created || "").localeCompare(a.created || ""));
+    // Newest document date first; ones without a date yet (not read) count from when they were added.
+    .sort((a, b) => docDay(b).localeCompare(docDay(a)) || (b.created || "").localeCompare(a.created || ""));
   return (
     <>
       {g.owner ? (
@@ -46,6 +47,8 @@ export function DocsView() {
     </>
   );
 }
+
+const docDay = (d: Doc) => d.date || d.ex.date || (d.created || "").slice(0, 10);
 
 function useFileSrc(id: string | null) {
   const g = useGarage();
