@@ -1,4 +1,8 @@
-import { Pool } from "pg";
+import { Pool, types } from "pg";
+
+// Dates stay "YYYY-MM-DD" strings (a Date would shift with the server's time zone); money comes back as a number.
+types.setTypeParser(1082, (v) => v);
+types.setTypeParser(1700, (v) => (v == null ? null : Number(v)));
 
 let pool: Pool | null = null;
 

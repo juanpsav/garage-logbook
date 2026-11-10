@@ -1,4 +1,5 @@
 import { uid } from "../dates";
+import { fromLegacy, isLegacy } from "../legacy";
 import { COLLECTIONS, type CollectionName, type Collections, type Data } from "../types";
 import { emptyData, StoreError, type Store } from "./index";
 
@@ -14,8 +15,11 @@ export class LocalStore implements Store {
 
   async load() {
     try {
-      const raw = JSON.parse(localStorage.getItem(KEY) || "{}");
+      let raw = JSON.parse(localStorage.getItem(KEY) || "{}");
+      const old = isLegacy(raw);
+      if (old) raw = fromLegacy(raw);
       for (const k of COLLECTIONS) (this.data[k] as unknown[]) = Array.isArray(raw[k]) ? raw[k] : [];
+      if (old) this.save();
     } catch {
       this.data = emptyData();
     }

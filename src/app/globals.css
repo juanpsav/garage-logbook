@@ -190,3 +190,30 @@ a{color:var(--ink);text-underline-offset:2px}
 .notice[role="alert"]{background:var(--soon-soft);border-color:#fedf89}
 .notice.reading{flex-wrap:nowrap;justify-content:flex-start}
 .done-group .hist{opacity:.85}
+
+/* Assistant chat */
+.chat{display:flex;flex-direction:column;gap:10px}
+.msgs{display:flex;flex-direction:column;gap:8px}
+.msg{max-width:min(92%,640px);padding:9px 12px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);overflow-wrap:anywhere}
+.msg.user{align-self:flex-end;background:var(--accent-soft);border-color:transparent}
+.msg.assistant{align-self:flex-start}
+.msg.error{border-color:#fecdca;background:var(--late-soft)}
+.msg p{margin:0}
+.msg p+p,.msg p+ul,.msg ul+p{margin-top:8px}
+.msg ul{margin:4px 0 0;padding-left:18px}
+.msg li+li{margin-top:2px}
+.acts-done{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.composer{display:flex;gap:8px;align-items:flex-end}
+.composer textarea{flex:1;min-width:0;resize:vertical;border:1px solid var(--line-strong);border-radius:6px;padding:7px 9px;background:var(--surface);font-size:.875rem;line-height:1.4}
+.composer textarea:focus{outline:none;border-color:var(--focus);box-shadow:0 0 0 3px #5b7cfa22}
+@media (pointer:coarse){.composer textarea{font-size:16px}}
+
+/* A visit's lines: done, found, quoted */
+.lines{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+.line{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:8px 10px;border-top:1px solid var(--line);align-items:baseline}
+.line:first-child{border-top:0}
+.line .t{min-width:0;overflow-wrap:anywhere;display:flex;flex-wrap:wrap;gap:6px;align-items:baseline}
+.line .c{font-variant-numeric:tabular-nums;white-space:nowrap}
+.line .sub{grid-column:1 / -1;font-size:.78rem;color:var(--muted);overflow-wrap:anywhere}
+.line .orig{font-style:italic}
+.line .dec{grid-column:1 / -1;justify-self:start;font-size:.78rem;border:1px solid var(--line-strong);border-radius:5px;padding:2px 6px;background:var(--surface)}

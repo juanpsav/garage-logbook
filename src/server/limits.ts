@@ -6,13 +6,14 @@ const envInt = (name: string, fallback: number) => {
   return Number.isFinite(n) && n >= 0 ? n : fallback;
 };
 
-/** Daily limits for document reads and schedule lookups. All overridable from Vercel's environment settings. */
+/** Daily limits for assistant messages and schedule lookups. All overridable from Vercel's environment settings. */
 export const LIMITS = {
-  admin: envInt("READ_LIMIT_ADMIN", 60),
+  // One "turn" is one message to the assistant, however many steps it takes to answer.
+  agentAdmin: envInt("AGENT_LIMIT_ADMIN", 300),
   adminSchedules: envInt("SCHEDULE_LIMIT_ADMIN", 10),
   // Anyone can sign up, so signed-in users get modest caps each, plus a cap across all of them.
-  member: envInt("READ_LIMIT_MEMBER", 5),
-  memberTotal: envInt("READ_LIMIT_MEMBER_TOTAL", 30),
+  agentMember: envInt("AGENT_LIMIT_MEMBER", 20),
+  agentMemberTotal: envInt("AGENT_LIMIT_MEMBER_TOTAL", 100),
   memberSchedules: envInt("SCHEDULE_LIMIT_MEMBER", 1),
   memberSchedulesTotal: envInt("SCHEDULE_LIMIT_MEMBER_TOTAL", 3),
   memberUploads: envInt("UPLOAD_LIMIT_MEMBER", 80),

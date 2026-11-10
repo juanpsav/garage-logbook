@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { now, num, today, uid } from "@/lib/dates";
-import { DOC_TYPES } from "@/lib/extraction";
 import { every, repeats, status, type Status } from "@/lib/logic";
 import type { Task } from "@/lib/types";
 import { DoneList } from "./DoneList";
@@ -48,7 +47,7 @@ function TaskRow({ task: t, st }: { task: Task; st: Status }) {
   const g = useGarage();
   const car = g.carById(t.carId);
   const open = g.ui.open?.id === t.id ? g.ui.open.kind : null;
-  const doc = t.docId ? g.data.docs.find((d) => d.id === t.docId) : undefined;
+  const visit = t.visitId ? g.data.visits.find((v) => v.id === t.visitId) : undefined;
   const toggle = (kind: string) => { g.setAdding(false); g.setOpen(open === kind ? null : { id: t.id, kind }); };
   return (
     <div className={`item ${st.cls}`}>
@@ -59,7 +58,7 @@ function TaskRow({ task: t, st }: { task: Task; st: Status }) {
           {g.ui.car === "all" && g.cars.length > 1 && car && <span className="chip car">{car.name}</span>}
           {st.chips.map(([k, x]) => <span key={x} className={`chip ${k}`}>{x}</span>)}
           {repeats(t) && <span className="muted">{every(t)}</span>}
-          {doc && <button className="chip" onClick={() => openDoc(g, doc.id)}>From {DOC_TYPES[doc.type || doc.ex.type || "other"].toLowerCase()}</button>}
+          {visit && <button className="chip" onClick={() => openVisit(g, visit.id)}>From {visit.title || "a visit"}</button>}
         </span>
         {t.notes && <span className="notes">{t.notes}</span>}
       </div>
@@ -73,10 +72,10 @@ function TaskRow({ task: t, st }: { task: Task; st: Status }) {
   );
 }
 
-export function openDoc(g: ReturnType<typeof useGarage>, id: string) {
+export function openVisit(g: ReturnType<typeof useGarage>, id: string) {
   g.setCar("all");
-  g.setView("docs");
-  g.setOpen({ id, kind: "doc" });
+  g.setView("visits");
+  g.setOpen({ id, kind: "visit" });
 }
 
 function DoneForm({ task: t }: { task: Task }) {

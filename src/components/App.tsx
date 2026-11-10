@@ -4,27 +4,28 @@ import { useEffect, useState } from "react";
 import { acceptable } from "@/lib/files";
 import { status } from "@/lib/logic";
 import { CarsView, LookupStatus, Welcome } from "./CarsView";
-import { DocsView } from "./DocsView";
+import { ChatView } from "./ChatView";
 import { useGarage, type View } from "./state";
 import { Sticker } from "./Sticker";
 import { SuggestedView } from "./SuggestedView";
 import { TodoView } from "./TodoView";
+import { VisitsView } from "./VisitsView";
 
-const VIEWS: [View, string][] = [["todo", "Maintenance"], ["suggested", "Suggested"], ["docs", "Documents"], ["cars", "Cars"]];
+const VIEWS: [View, string][] = [["todo", "Maintenance"], ["chat", "Ask"], ["visits", "Visits"], ["suggested", "Suggested"], ["cars", "Cars"]];
 
 export function App({ account }: { account: React.ReactNode }) {
   const g = useGarage();
   const { ui, cars, data } = g;
   const [dropping, setDropping] = useState(false);
 
-  // Paste a screenshot while on Documents.
+  // Paste a screenshot while on Visits.
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
-      if (ui.view !== "docs" || !g.owner || (e.target as HTMLElement)?.closest?.("input,textarea")) return;
+      if (ui.view !== "visits" || !g.owner || (e.target as HTMLElement)?.closest?.("input,textarea")) return;
       const fl = [...(e.clipboardData?.files ?? [])].filter(acceptable);
       if (!fl.length) return;
       e.preventDefault();
-      g.handleFiles(fl);
+      g.newVisit(fl);
     };
     document.addEventListener("paste", onPaste);
     return () => document.removeEventListener("paste", onPaste);
@@ -33,7 +34,7 @@ export function App({ account }: { account: React.ReactNode }) {
   const carFilter = ui.car !== "all" && !g.carById(ui.car) ? "all" : ui.car;
   const lateCount = data.tasks.filter((t) => g.carById(t.carId) && (carFilter === "all" || t.carId === carFilter) && status(t, g.carById(t.carId)).rank === 0).length;
 
-  const Body = { todo: TodoView, suggested: SuggestedView, docs: DocsView, cars: CarsView }[ui.view];
+  const Body = { todo: TodoView, chat: ChatView, visits: VisitsView, suggested: SuggestedView, cars: CarsView }[ui.view];
 
   return (
     <>
@@ -46,7 +47,7 @@ export function App({ account }: { account: React.ReactNode }) {
           const fl = [...e.dataTransfer.files].filter(acceptable);
           if (!fl.length || !cars.length || !g.owner) return;
           e.preventDefault();
-          g.handleFiles(fl);
+          g.newVisit(fl);
         }}
       >
         <header className="top">

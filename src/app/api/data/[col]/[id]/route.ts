@@ -1,30 +1,39 @@
-import { sql } from "@/server/db";
-import { getOwner, unauthorized } from "@/server/session";
+import { schemas } from "@/lib/schema";
 import { COLLECTIONS, type CollectionName } from "@/lib/types";
+import { deleteRecord, putRecord } from "@/server/garage";
+import { getOwner, unauthorized } from "@/server/session";
 
 const MAX_BYTES = 100_000;
-const valid = (col: string, id: string) => COLLECTIONS.includes(col as CollectionName) && /^[\w-]{1,64}$/.test(id);
+const bad = (error = "bad_request") => Response.json({ error }, { status: 400 });
+const validCol = (col: string): col is CollectionName => COLLECTIONS.includes(col as CollectionName);
 
 export async function PUT(req: Request, ctx: RouteContext<"/api/data/[col]/[id]">) {
   const owner = await getOwner();
   if (!owner) return unauthorized();
   const { col, id } = await ctx.params;
-  if (!valid(col, id)) return Response.json({ error: "bad_request" }, { status: 400 });
+  if (!validCol(col)) return bad();
   const text = await req.text();
   if (text.length > MAX_BYTES) return Response.json({ error: "too_large" }, { status: 413 });
-  let data: Record<string, unknown>;
+  let body: unknown;
   try {
-    data = JSON.parse(text);
+    body = JSON.parse(text);
   } catch {
-    return Response.json({ error: "bad_request" }, { status: 400 });
+    return bad();
   }
-  if (!data || typeof data !== "object" || Array.isArray(data)) return Response.json({ error: "bad_request" }, { status: 400 });
-  delete data.id;
-  await sql(
-    `insert into records (user_id, collection, id, data) values ($1, $2, $3, $4)
-     on conflict (user_id, collection, id) do update set data = excluded.data, updated_at = now()`,
-    [owner.id, col, id, data],
-  );
+  const parsed = schemas[col].safeParse(body);
+  if (!parsed.success || parsed.data.id !== id) return bad();
+  // A file must point into the owner's own folder of the Blob store.
+  if (col === "files") {
+    const f = parsed.data as { orig: string; view: string | null };
+    if (![f.orig, f.view].every((p) => p == null || (p.startsWith(`u/${owner.id}/`) && !p.includes("..")))) return bad();
+  }
+  try {
+    await putRecord(owner.id, col, parsed.data);
+  } catch (e) {
+    // 23503: a reference to a car or visit that isn't there.
+    if ((e as { code?: string }).code === "23503") return bad("missing_reference");
+    throw e;
+  }
   return new Response(null, { status: 204 });
 }
 
@@ -32,7 +41,7 @@ export async function DELETE(_req: Request, ctx: RouteContext<"/api/data/[col]/[
   const owner = await getOwner();
   if (!owner) return unauthorized();
   const { col, id } = await ctx.params;
-  if (!valid(col, id)) return Response.json({ error: "bad_request" }, { status: 400 });
-  await sql("delete from records where user_id = $1 and collection = $2 and id = $3", [owner.id, col, id]);
+  if (!validCol(col) || !/^[\w-]{1,64}$/.test(id)) return bad();
+  await deleteRecord(owner.id, col, id);
   return new Response(null, { status: 204 });
 }

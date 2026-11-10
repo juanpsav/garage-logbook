@@ -2,26 +2,20 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import seedSchedules from "@/data/schedules.json";
-import { addDays, fmtDate, fmtKm, now, num, today, uid } from "@/lib/dates";
-import { cleanExtraction, DOC_TYPES } from "@/lib/extraction";
-import { acceptable, isPdf, MAX_FILES, MAX_READ_PAGES, pdfToImages, READ_EDGE, shrink } from "@/lib/files";
+import { fmtDate, fmtKm, now, today, uid } from "@/lib/dates";
+import { acceptable, isPdf, MAX_FILES, pdfToImages, shrink } from "@/lib/files";
 import { findSuggestion, matchSchedule, nextAfterDone, scheduleFor, taskFromSuggestion, type LastDone } from "@/lib/logic";
-import { readDocument, ReadError } from "@/lib/read-client";
 import { turnstileToken } from "@/lib/turnstile";
 import { emptyData, StoreError, type Store } from "@/lib/store";
-import type { Car, CollectionName, Collections, Data, Doc, DocType, Schedule, Task } from "@/lib/types";
+import type { Car, CollectionName, Collections, Data, FileRec, Item, Schedule, Task, Visit } from "@/lib/types";
 
-export type View = "todo" | "suggested" | "docs" | "cars";
+export type View = "todo" | "chat" | "visits" | "suggested" | "cars";
 export type Lookup = { state: "finding" } | { state: "failed"; msg: string };
 export type Open = { id: string; kind: string; confirm?: boolean } | null;
+export type HistoryForm = { carId: string; title: string; date: string; km: number | null; cost: number | null; note: string };
 
-export type DocEdit = { type: DocType; carId: string; title: string; date: string; shop: string; km: string; total: string; summary: string };
-
-export type DocForm = {
-  type: DocType; carId: string; title: string; date: string; shop: string; km: string; total: string;
-  addLog: boolean; done: Record<string, boolean>;
-  recs: Record<number, { on: boolean; title: string; urgency: "now" | "soon" | "later" }>;
-};
+/** A history entry's visit and its done lines, as the Done list shows them. */
+export const doneItems = (d: Data, visitId: string) => d.items.filter((i) => i.visitId === visitId && i.kind === "done");
 
 function useGarageState(store: Store, owner: { id: string; email: string } | null, signIn: (() => void) | null) {
   const [data, setData] = useState<Data>(emptyData);
@@ -32,10 +26,8 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
   const [open, setOpen] = useState<Open>(null);
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  const [reading, setReading] = useState<Set<string>>(new Set());
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [lookups, setLookups] = useState<Record<string, Lookup>>({});
-  const readers = useRef(new Map<string, AbortController>());
   // Latest data for async actions that run across several writes.
   const dataRef = useRef(data);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -59,6 +51,15 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
     return () => { live = false; };
   }, [store, toast]);
 
+  /** Reloads everything, after the assistant changed things on the server. */
+  const reload = useCallback(async () => {
+    try {
+      const d = await store.load();
+      dataRef.current = d;
+      setData(d);
+    } catch { /* keep what's shown */ }
+  }, [store]);
+
   const apply = (fn: (d: Data) => Data) => {
     dataRef.current = fn(dataRef.current);
     setData(dataRef.current);
@@ -73,7 +74,7 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
     try {
       await store.put(col, obj);
     } catch (e) {
-      toast(e instanceof StoreError && e.code === "quota" ? "Storage is full. Delete some old documents." : "Couldn't save. Check your connection and try again.");
+      toast(e instanceof StoreError && e.code === "quota" ? "Storage is full. Delete some old visits." : "Couldn't save. Check your connection and try again.");
     }
   };
 
@@ -132,6 +133,9 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
   const deleteCar = async (id: string) => {
     setOpen(null);
     for (const t of dataRef.current.tasks.filter((t) => t.carId === id)) await del("tasks", t.id);
+    // Visits and notes stay in history without a car.
+    for (const v of dataRef.current.visits.filter((v) => v.carId === id)) await put("visits", { ...v, carId: null });
+    for (const it of dataRef.current.items.filter((i) => i.carId === id)) await put("items", { ...it, carId: null });
     await del("cars", id);
     setView("todo");
     toast("Car deleted");
@@ -146,7 +150,7 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
   };
   const markDone = async (t: Task, f: { date: string; km: number | null; cost: number | null; note: string }) => {
     const c = carById(t.carId);
-    await put("log", { id: uid(), carId: t.carId, title: t.title, date: f.date, km: f.km, cost: f.cost, note: f.note, created: now() });
+    await addHistoryEntry({ carId: t.carId, title: t.title, ...f });
     if (c) await bumpOdometer(c, f.km, f.date);
     const n = await completeTask(t, f.date, f.km);
     setOpen(null);
@@ -170,213 +174,151 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
     toast(`Added to ${c.name}`);
   };
 
-  /* ---------- done work (history) ---------- */
-  const addLog = async (e: Omit<Collections["log"], "id" | "created">) => {
-    await put("log", { ...e, id: uid(), created: now() });
+  /* ---------- history (work done, logged by hand) ---------- */
+  /** A history entry typed in by hand is a confirmed visit with one done line. */
+  const addHistoryEntry = async (f: HistoryForm) => {
+    const v: Visit = { id: uid(), carId: f.carId, title: f.title, date: f.date, km: f.km, shop: null, total: f.cost, summary: null, status: "confirmed", created: now() };
+    await put("visits", v);
+    await put("items", {
+      id: uid(), carId: f.carId, visitId: v.id, source: "you", kind: "done", text: f.title, original: null, cost: f.cost, page: null,
+      unsure: false, keywords: [], note: f.note || null, decision: null, created: now(),
+    });
+  };
+  const addHistory = async (f: HistoryForm) => {
+    await addHistoryEntry(f);
+    const c = carById(f.carId);
+    if (c) await bumpOdometer(c, f.km, f.date);
     setOpen(null);
     toast("Saved to history");
   };
-  const updateLog = async (e: Collections["log"]) => {
-    await put("log", e);
+  /** Edits a visit's date, km and total; a one-line entry's line follows its title, cost and note. */
+  const updateHistory = async (v: Visit, f: HistoryForm) => {
+    await put("visits", { ...v, carId: f.carId, title: f.title, date: f.date, km: f.km, total: f.cost });
+    const lines = dataRef.current.items.filter((i) => i.visitId === v.id);
+    for (const it of lines) {
+      const solo = lines.length === 1 && it.kind === "done";
+      await put("items", { ...it, carId: f.carId, ...(solo && { text: f.title, cost: f.cost, note: f.note || null }) });
+    }
     setOpen(null);
     toast("Entry updated");
   };
-  const deleteLog = async (id: string) => { setOpen(null); await del("log", id); toast("Entry deleted"); };
 
-  /* ---------- documents ---------- */
-  const stopReading = (id: string) => {
-    readers.current.delete(id);
-    setReading((s) => { const n = new Set(s); n.delete(id); return n; });
-  };
-
-  const readDoc = async (id: string, pages: Blob[]) => {
-    const ctl = readers.current.get(id) ?? new AbortController();
-    readers.current.set(id, ctl);
-    setReading((s) => new Set(s).add(id));
-    const d = dataRef.current;
-    const ctx = {
-      today: today(),
-      cars: d.cars.map((c) => ({ id: c.id, name: c.name, odometerKm: c.km, model: scheduleFor(c, schedules)?.name ?? null })),
-      tasks: d.tasks.map((t) => ({ id: t.id, carId: t.carId, title: t.title })),
-    };
-    let ex: unknown = null, err: string | null = null;
+  /* ---------- visits ---------- */
+  /** Saves photos and PDFs as pages of a visit. Null (after a toast) on failure. */
+  const storePages = async (files: File[], visitId: string, start: number): Promise<FileRec[] | null> => {
+    setBusy(files.length > 1 ? `Saving ${files.length} pages…` : "Saving…");
+    const out: FileRec[] = [];
     try {
-      ex = await readDocument(pages, ctx, ctl.signal);
-    } catch (e) {
-      err = ctl.signal.aborted ? "Reading stopped. Fill in the details yourself, or tap Read again."
-        : e instanceof ReadError ? e.message
-        : "The reader couldn't finish. Try Read again, or fill in the details yourself.";
-    }
-    stopReading(id);
-    const cur = dataRef.current.docs.find((x) => x.id === id);
-    if (!cur) return;
-    const c = ex ? cleanExtraction(ex, dataRef.current.cars.map((x) => x.id), dataRef.current.tasks.map((x) => x.id)) : cur.ex;
-    await put("docs", { ...cur, status: "review", ex: c, carId: cur.carId || c.carId || null, readError: err });
-  };
-
-  /** Saves photos and PDFs to the store and prepares the pages to read. Null (after a toast) on failure. */
-  const storeFiles = async (files: File[]) => {
-    setBusy(files.length > 1 ? `Saving ${files.length} files…` : "Saving…");
-    const stored: Doc["files"] = [], pages: Blob[] = [];
-    let thumb: string | null = null;
-    try {
-      for (const f of files) {
+      for (const [i, f] of files.entries()) {
+        const base = { id: uid(), visitId, itemId: null, position: start + i, name: f.name || null, created: now() };
         if (isPdf(f)) {
-          stored.push({ id: await store.putFile(f, "application/pdf"), type: "application/pdf" });
+          const orig = await store.putFile(f, "application/pdf");
+          let view: string | null = null;
           try {
-            const imgs = await pdfToImages(f, MAX_READ_PAGES);
-            pages.push(...imgs);
-            if (!thumb && imgs[0]) thumb = await store.putFile(await shrink(imgs[0], 400), "image/jpeg");
-          } catch { /* stored, just not readable */ }
+            const [first] = await pdfToImages(f, 1);
+            if (first) view = await store.putFile(await shrink(first, 600), "image/jpeg");
+          } catch { /* kept, just without a preview */ }
+          out.push({ ...base, type: "application/pdf", orig, view });
         } else {
           let b: Blob;
           try { b = await shrink(f, 2000); } catch { throw new StoreError("decode", "decode"); }
-          const id = await store.putFile(b, "image/jpeg");
-          // Signed-in uploads also keep the photo exactly as taken; browser storage is too small for both.
-          const orig = store.kind === "server" ? { id: await store.putFile(f, f.type || "image/jpeg"), type: f.type || "image/jpeg", name: f.name || undefined } : undefined;
-          stored.push({ id, type: "image/jpeg", ...(orig && { orig }) });
-          pages.push(await shrink(b, READ_EDGE));
-          thumb ??= id;
+          const view = await store.putFile(b, "image/jpeg");
+          // The photo exactly as taken is kept too, when there's room for it (signed in).
+          const orig = store.kind === "server" ? await store.putFile(f, f.type || "image/jpeg") : view;
+          out.push({ ...base, type: f.type || "image/jpeg", orig, view });
         }
       }
     } catch (e) {
       const code = e instanceof StoreError ? e.code : "";
       toast(code === "decode" ? "Couldn't open that image. Try a JPEG or PNG, or take the photo again."
-        : code === "quota" ? "Storage is full. Delete some old documents."
+        : code === "quota" ? "Storage is full. Delete some old visits."
         : code === "too_large" ? "That file is too large."
         : "Couldn't save the file. Check your connection and try again.");
       return null;
     } finally {
       setBusy(null);
     }
-    return { stored, pages, thumb };
+    return out;
   };
 
-  const handleFiles = async (list: File[]) => {
+  /** Starts a visit from photos or PDFs. It waits as a draft so more pages can be added before going through it. */
+  const newVisit = async (list: File[]) => {
     const files = list.filter(acceptable).slice(0, MAX_FILES);
     if (!files.length) return;
-    setViewState("docs");
+    setViewState("visits");
     setAdding(false);
-    const saved = await storeFiles(files);
-    if (!saved) return;
-    const { stored, thumb } = saved;
-    // One photo is often the first page of several taken with the camera: wait for more pages before reading.
-    const pages = files.length === 1 && !isPdf(files[0]) ? [] : saved.pages;
-    const status: Doc["status"] = pages.length ? "reading" : saved.pages.length ? "draft" : "review";
-    const doc: Doc = { id: uid(), created: now(), files: stored, thumb, carId: car !== "all" ? car : null, status, ex: {} };
-    setOpen({ id: doc.id, kind: "doc" });
-    if (pages.length) {
-      readers.current.set(doc.id, new AbortController());
-      setReading((s) => new Set(s).add(doc.id));
-    }
-    await put("docs", doc);
-    if (pages.length) readDoc(doc.id, pages.slice(0, MAX_READ_PAGES));
+    const v: Visit = { id: uid(), carId: car !== "all" ? car : cars.length === 1 ? cars[0].id : null, title: "", date: null, km: null, shop: null, total: null, summary: null, status: "draft", created: now() };
+    await put("visits", v);
+    setOpen({ id: v.id, kind: "visit" });
+    const recs = await storePages(files, v.id, 0);
+    if (!recs) { await del("visits", v.id); return; }
+    for (const r of recs) await put("files", r);
   };
 
-  /** Adds pages photographed separately. A draft waits for Read it; a document already read is read again as a whole. */
-  const addPages = async (id: string, list: File[]) => {
-    const d = dataRef.current.docs.find((x) => x.id === id);
-    if (!d) return;
-    const room = MAX_FILES - d.files.length;
+  const addPages = async (visitId: string, list: File[]) => {
+    const have = dataRef.current.files.filter((f) => f.visitId === visitId);
+    const room = MAX_FILES - have.length;
     const files = list.filter(acceptable).slice(0, Math.max(0, room));
     if (!files.length) {
-      if (room <= 0) toast(`A document holds up to ${MAX_FILES} files.`);
+      if (room <= 0) toast(`A visit holds up to ${MAX_FILES} pages.`);
       return;
     }
-    const saved = await storeFiles(files);
-    if (!saved) return;
-    const next: Doc = { ...d, files: [...d.files, ...saved.stored], thumb: d.thumb ?? saved.thumb };
-    if (d.status === "draft") await put("docs", next);
-    else await readAgain(next);
+    const recs = await storePages(files, visitId, Math.max(-1, ...have.map((f) => f.position)) + 1);
+    if (recs) for (const r of recs) await put("files", r);
   };
 
-  const rereadDoc = async (id: string) => {
-    const d = dataRef.current.docs.find((x) => x.id === id);
-    if (d) await readAgain(d);
-  };
-
-  const readAgain = async (d: Doc) => {
-    const id = d.id;
-    readers.current.set(id, new AbortController());
-    setReading((s) => new Set(s).add(id));
-    await put("docs", { ...d, status: "reading", readError: null });
-    const pages: Blob[] = [];
-    try {
-      for (const f of d.files) {
-        const b = await store.getFile(f.id);
-        if (f.type === "application/pdf") pages.push(...(await pdfToImages(b)));
-        else pages.push(await shrink(b, READ_EDGE));
-      }
-    } catch { /* handled below */ }
-    if (!pages.length) {
-      stopReading(id);
-      await put("docs", { ...d, status: "review", readError: "Couldn't load the photos to read them again." });
-      return;
+  const deleteFiles = async (recs: FileRec[]) => {
+    for (const p of new Set(recs.flatMap((f) => [f.orig, f.view]).filter((x): x is string => !!x))) {
+      try { await store.delFile(p); } catch { /* already gone */ }
     }
-    readDoc(id, pages.slice(0, MAX_READ_PAGES));
   };
 
-  const stopRead = (id: string) => readers.current.get(id)?.abort();
+  const deletePage = async (f: FileRec) => {
+    await deleteFiles([f]);
+    await del("files", f.id);
+  };
 
-  const deleteDoc = async (id: string) => {
-    const d = dataRef.current.docs.find((x) => x.id === id);
-    if (!d) return;
+  /** Deletes a visit with its pages and lines. Tasks it created stay. */
+  const deleteVisit = async (id: string) => {
     setOpen(null);
-    for (const f of [...d.files.flatMap((f) => [f.id, f.orig?.id]), d.thumb].filter((x): x is string => !!x)) {
-      try { await store.delFile(f); } catch { /* already gone */ }
+    const d = dataRef.current;
+    await deleteFiles(d.files.filter((f) => f.visitId === id));
+    for (const t of d.tasks.filter((t) => t.visitId === id)) await put("tasks", { ...t, visitId: null });
+    await del("visits", id);
+    // The server removes the lines and pages with the visit; the browser store needs telling.
+    apply((x) => ({ ...x, items: x.items.filter((i) => i.visitId !== id), files: x.files.filter((f) => f.visitId !== id) }));
+    if (store.kind === "local") {
+      for (const i of d.items.filter((i) => i.visitId === id)) await store.del("items", i.id);
+      for (const f of d.files.filter((f) => f.visitId === id)) await store.del("files", f.id);
     }
-    await del("docs", id);
-    toast("Document deleted");
+    toast("Visit deleted");
   };
 
-  /** Edits a saved document's details and keeps the history entry it made in step. */
-  const updateDoc = async (doc: Doc, f: DocEdit) => {
-    const c = carById(f.carId);
-    if (!c) { toast("Choose which car this is for."); return; }
-    const info = { type: f.type, title: f.title.trim(), date: f.date || today(), shop: f.shop.trim() || null, km: num(f.km), total: num(f.total), summary: f.summary.trim() || null };
-    const log = doc.logId ? dataRef.current.log.find((e) => e.id === doc.logId) : undefined;
-    if (log) {
-      // The entry's note starts with the shop name when it was made; swap in the new one.
-      const note = doc.shop && log.note.startsWith(doc.shop) ? (info.shop ?? "") + log.note.slice(doc.shop.length) : log.note;
-      await put("log", { ...log, carId: c.id, title: info.title, date: info.date, km: info.km, cost: info.total, note: note.replace(/^ · /, "") });
-    }
-    await bumpOdometer(c, info.km, info.date);
-    await put("docs", { ...doc, ...info, carId: c.id });
-    setOpen({ id: doc.id, kind: "doc" });
-    toast(log ? "Document and history entry updated" : "Document updated");
+  const confirmVisit = async (v: Visit) => {
+    const c = carById(v.carId);
+    if (!c || !v.date) { toast("Choose the car and date first."); return; }
+    await put("visits", { ...v, status: "confirmed" });
+    await bumpOdometer(c, v.km, v.date);
+    toast("Saved to history");
   };
-  const saveDoc = async (doc: Doc, f: DocForm) => {
-    const ex = doc.ex, c = carById(f.carId), T = today();
-    if (!c) { toast("Choose which car this is for."); return; }
-    const info = { type: f.type, title: f.title.trim(), date: f.date || T, shop: f.shop.trim() || null, km: num(f.km), total: num(f.total), summary: ex.summary ?? null };
-    let logId: string | null = null;
-    const taskIds: string[] = [];
-    if (f.addLog) {
-      logId = uid();
-      const items = (ex.workDone || []).map((w) => w.title).join(", ");
-      await put("log", { id: logId, carId: c.id, title: info.title, date: info.date, km: info.km, cost: info.total, note: [info.shop, items].filter(Boolean).join(" · "), docId: doc.id, created: now() });
+
+  /** Hands a draft to the assistant: the visit's conversation starts with its pages. */
+  const startVisit = async (v: Visit) => { await put("visits", { ...v, status: "open" }); };
+
+  /** Saves edited visit details; its lines follow the car. */
+  const saveVisit = async (v: Visit) => {
+    const old = dataRef.current.visits.find((x) => x.id === v.id);
+    await put("visits", v);
+    if (old && old.carId !== v.carId) {
+      for (const it of dataRef.current.items.filter((i) => i.visitId === v.id)) await put("items", { ...it, carId: v.carId });
     }
-    for (const id of ex.completes || []) {
-      const t = dataRef.current.tasks.find((x) => x.id === id);
-      if (t && t.carId === c.id && f.done[id]) await completeTask(t, info.date, info.km);
-    }
-    for (const [i, r] of (ex.recommended || []).entries()) {
-      const rf = f.recs[i];
-      if (!rf?.on) continue;
-      const t: Task = {
-        id: uid(), carId: c.id, title: (rf.title || r.title).trim(), docId: doc.id, created: now(), everyMonths: null, everyKm: null, anchor: null,
-        notes: [r.notes, r.estCost != null ? `Quoted $${r.estCost.toFixed(2)}${info.shop ? ` at ${info.shop.replace(/\.$/, "")}` : ""}.` : "", `From ${DOC_TYPES[info.type].toLowerCase()} on ${fmtDate(info.date)}.`].filter(Boolean).join(" "),
-        dueDate: r.dueDate || (rf.urgency === "now" ? T : rf.urgency === "soon" ? addDays(T, 30) : null),
-        dueKm: r.dueKm ?? null,
-      };
-      await put("tasks", t);
-      taskIds.push(t.id);
-    }
-    await bumpOdometer(c, info.km, info.date);
-    await put("docs", { ...doc, ...info, carId: c.id, status: "saved", logId, taskIds, readError: null });
-    setOpen({ id: doc.id, kind: "doc" });
-    toast([logId && "Added to history", taskIds.length && `${taskIds.length} task${taskIds.length === 1 ? "" : "s"} created`].filter(Boolean).join(" · ") || "Saved");
+    const c = carById(v.carId);
+    if (c && v.status === "confirmed" && v.date) await bumpOdometer(c, v.km, v.date);
+    toast("Saved");
   };
+
+  const updateItem = async (it: Item) => { await put("items", it); };
+  const deleteItem = async (id: string) => { await del("items", id); };
 
   /* ---------- schedule lookup ---------- */
   const findSchedule = async (vehicle: string, fresh: boolean): Promise<Schedule | string> => {
@@ -419,13 +361,13 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
   const dismissLookup = (carId: string) => setLookups((m) => { const n = { ...m }; delete n[carId]; return n; });
 
   return {
-    store, owner, data, loaded, schedules, cars, carById, lookups, findForCar, dismissLookup,
-    ui: { car, view, open, adding, busy, reading, toastMsg },
+    store, owner, data, loaded, schedules, cars, carById, lookups, findForCar, dismissLookup, reload,
+    ui: { car, view, open, adding, busy, toastMsg },
     setCar, setView, setOpen, setAdding, close, toast,
     addCar, editCar, setOdometer, deleteCar,
     markDone, saveTasks, deleteTask, addSuggestion,
-    addLog, updateLog, deleteLog,
-    handleFiles, addPages, rereadDoc, stopRead, deleteDoc, saveDoc, updateDoc, signIn,
+    addHistory, updateHistory,
+    newVisit, addPages, deletePage, deleteVisit, startVisit, saveVisit, confirmVisit, updateItem, deleteItem, signIn,
   };
 }
 

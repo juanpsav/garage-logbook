@@ -17,7 +17,7 @@ export interface Store {
   delFile(id: string): Promise<void>;
 }
 
-export const emptyData = (): Data => ({ cars: [], tasks: [], log: [], docs: [] });
+export const emptyData = (): Data => ({ cars: [], tasks: [], visits: [], items: [], files: [] });
 
 export class StoreError extends Error {
   constructor(message: string, readonly code: string) {
