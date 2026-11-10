@@ -3,6 +3,10 @@ import { uid } from "../dates";
 import type { CollectionName, Collections, Data } from "../types";
 import { StoreError, type Store } from "./index";
 
+const EXT: Record<string, string> = {
+  "application/pdf": "pdf", "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/heic": "heic", "image/heif": "heif",
+};
+
 async function ok(res: Response) {
   if (res.ok) return res;
   throw new StoreError(`Request failed (${res.status})`, res.status === 413 ? "too_large" : res.status === 401 ? "signed_out" : "network");
@@ -30,7 +34,7 @@ export class ServerStore implements Store {
   }
 
   async putFile(blob: Blob, type: string) {
-    const ext = type === "application/pdf" ? "pdf" : "jpg";
+    const ext = EXT[type] ?? "bin";
     try {
       const r = await upload(`u/${this.userId}/${uid()}.${ext}`, blob, {
         access: "private",

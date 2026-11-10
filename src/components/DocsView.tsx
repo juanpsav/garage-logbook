@@ -5,7 +5,7 @@ import { fmtDate, fmtKm, fmtMoney, today } from "@/lib/dates";
 import { DOC_TYPES } from "@/lib/extraction";
 import { MAX_FILES } from "@/lib/files";
 import { status } from "@/lib/logic";
-import type { Doc, DocType } from "@/lib/types";
+import type { Doc, DocType, StoredFile } from "@/lib/types";
 import { useGarage, type DocEdit, type DocForm } from "./state";
 
 export function DocsView() {
@@ -67,12 +67,14 @@ function Thumb({ id }: { id: string | null }) {
   return id && src ? <img className="thumb" src={src} alt="" /> : <span className="thumb">PDF</span>;
 }
 
-function Page({ id, type, n }: { id: string; type: string; n: number }) {
-  const src = useFileSrc(id);
+function Page({ file, n }: { file: StoredFile; n: number }) {
+  const src = useFileSrc(file.id);
+  // Tapping a photo opens the original as uploaded, when there is one.
+  const full = useFileSrc(file.orig?.id ?? null) ?? src;
   if (!src) return <span className="pdf">…</span>;
-  if (type === "application/pdf") return <a className="pdf" href={src} target="_blank" rel="noopener">Open PDF</a>;
+  if (file.type === "application/pdf") return <a className="pdf" href={src} target="_blank" rel="noopener">Open PDF</a>;
   // eslint-disable-next-line @next/next/no-img-element
-  return <a href={src} target="_blank" rel="noopener"><img src={src} alt={`Page ${n}`} /></a>;
+  return <a href={full ?? src} target="_blank" rel="noopener"><img src={src} alt={`Page ${n}`} /></a>;
 }
 
 function DocCard({ doc: d }: { doc: Doc }) {
@@ -103,7 +105,7 @@ function DocCard({ doc: d }: { doc: Doc }) {
       {open && (
         <div className="doc-body">
           <div className="pages">
-            {d.files.map((f, i) => <Page key={f.id} id={f.id} type={f.type} n={i + 1} />)}
+            {d.files.map((f, i) => <Page key={f.id} file={f} n={i + 1} />)}
             {g.owner && !reading && d.status !== "saved" && d.files.length < MAX_FILES && (
               <label className="pdf add-page">
                 + Add page

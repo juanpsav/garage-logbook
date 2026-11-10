@@ -15,7 +15,7 @@ export const LIMITS = {
   memberTotal: envInt("READ_LIMIT_MEMBER_TOTAL", 30),
   memberSchedules: envInt("SCHEDULE_LIMIT_MEMBER", 1),
   memberSchedulesTotal: envInt("SCHEDULE_LIMIT_MEMBER_TOTAL", 3),
-  memberUploads: envInt("UPLOAD_LIMIT_MEMBER", 40),
+  memberUploads: envInt("UPLOAD_LIMIT_MEMBER", 80),
   // Schedule lookups cost far more than reads (web research with Claude), so guests get few.
   guestSchedulesPerDevice: envInt("SCHEDULE_LIMIT_GUEST_DEVICE", 1),
   guestSchedulesPerIp: envInt("SCHEDULE_LIMIT_GUEST_IP", 1),

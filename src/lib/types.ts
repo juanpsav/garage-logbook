@@ -81,7 +81,8 @@ export type Extraction = {
   completes: string[];
 };
 
-export type StoredFile = { id: string; type: string };
+/** id is the copy the app shows and reads (JPEG for photos); orig is the photo exactly as uploaded. */
+export type StoredFile = { id: string; type: string; orig?: { id: string; type: string; name?: string } };
 
 export type Doc = {
   id: string;

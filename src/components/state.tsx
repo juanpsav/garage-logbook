@@ -232,7 +232,9 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
           let b: Blob;
           try { b = await shrink(f, 2000); } catch { throw new StoreError("decode", "decode"); }
           const id = await store.putFile(b, "image/jpeg");
-          stored.push({ id, type: "image/jpeg" });
+          // Signed-in uploads also keep the photo exactly as taken; browser storage is too small for both.
+          const orig = store.kind === "server" ? { id: await store.putFile(f, f.type || "image/jpeg"), type: f.type || "image/jpeg", name: f.name || undefined } : undefined;
+          stored.push({ id, type: "image/jpeg", ...(orig && { orig }) });
           pages.push(await shrink(b, READ_EDGE));
           thumb ??= id;
         }
@@ -320,7 +322,7 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
     const d = dataRef.current.docs.find((x) => x.id === id);
     if (!d) return;
     setOpen(null);
-    for (const f of [...d.files.map((f) => f.id), d.thumb].filter((x): x is string => !!x)) {
+    for (const f of [...d.files.flatMap((f) => [f.id, f.orig?.id]), d.thumb].filter((x): x is string => !!x)) {
       try { await store.delFile(f); } catch { /* already gone */ }
     }
     await del("docs", id);

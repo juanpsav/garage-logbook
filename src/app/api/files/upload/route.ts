@@ -15,7 +15,7 @@ export async function POST(req: Request) {
         if (!pathname.startsWith(`u/${owner.id}/`)) throw new Error("bad path");
         if (!owner.admin && (await take([{ key: `upload:user:${owner.id}`, limit: LIMITS.memberUploads }]))) throw new Error("rate_limited");
         return {
-          allowedContentTypes: ["image/jpeg", "application/pdf"],
+          allowedContentTypes: ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf"],
           maximumSizeInBytes: 20 * 1024 * 1024,
           addRandomSuffix: true,
         };
