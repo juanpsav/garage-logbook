@@ -18,6 +18,8 @@ The person who was at the counter knows things the paper doesn't: what the techn
 4. The agent updates the visit through tools while a live card beside the chat shows the result. You confirm it.
 5. The conversation is kept with the visit: your account of what the shop said, next to their paperwork.
 
+**A chat per car, outside visits.** You can talk to the agent about a car at any time: "I hear a clunk from the front left over bumps", "add a tire rotation every 10,000 km", "should I worry about this rust spot?" with a photo. It talks it through, creates or edits tasks, and saves an **observation**, a `found` item that came from you rather than a shop, with an optional photo. When a later visit deals with it, the agent links the two.
+
 The Maintenance, Suggested and Cars views stay; they become views of better data rather than the main way in.
 
 ## Advisor
@@ -42,7 +44,7 @@ Your own checks (a photo, "front pads 6 mm") are saved as evidence on the visit 
 
 - **Tools are the core.** All logic lives in a tools layer (`add_item`, `update_item`, `create_task`, `set_odometer`, `search_records`, `get_schedule`, …) that reads and writes our own tables. The web chat and the MCP server are two clients of the same tools.
 - **Models are replaceable.** Claude Sonnet 5.5 runs the conversation and reads documents. Claude Opus 5.5 with web search handles an explicit "second opinion" on a quote (recalls, bulletins, typical prices). Swapping models touches one module.
-- **Cohere** is removed from document reading. Search doesn't need it (see below). It can come back for a specific job later if it earns one.
+- **No Cohere.** Every job it could do here (reading, ranking, page search, classification, translation) is done by Claude in the same pass or by Postgres for free, and it would add a vendor, a key, trial limits and another third party holding the documents.
 - **Data stays ours.** Neon Postgres and private Vercel Blob; export and Drive sync mean nothing depends on the app staying up.
 - **Costs** stay capped with the existing daily per-user and shared buckets (`src/server/limits.ts`), counted per agent turn. Guests can't run the agent; they get a read-only sample visit to look at.
 
@@ -55,8 +57,8 @@ Structured only where the app computes something; everything else is text.
 | `cars` | name, km, km date, schedule id |
 | `visits` | car, date, km, shop, total, summary, status (draft / in conversation / confirmed) |
 | `files` | visit, page order, original file in Blob, derived copies (read size, thumbnail) |
-| `items` | visit, kind (`done` / `found` / `quoted`), original text, plain text, cost, page, confidence, keywords (`text[]`), your note, decision for quotes (pending / accepted / declined / deferred), advisor verdict (`jsonb`) |
-| `messages` | visit (or null for general chat), role, content, created |
+| `items` | car, visit (null for your own observations), source (shop / you), kind (`done` / `found` / `quoted`), original text, plain text, cost, page, confidence, keywords (`text[]`), your note, decision for quotes (pending / accepted / declined / deferred), advisor verdict (`jsonb`) |
+| `messages` | car, visit (null for the car chat), role, content, created |
 | `tasks` | as today: car, title, due date/km, repeat rule, source item |
 
 - History is the `done` items of confirmed visits. Manual history entries become a visit with one item.
@@ -69,7 +71,7 @@ No LLM or embedding service is needed at this size (a few cars, hundreds of item
 
 - Postgres full-text search over plain text, original text, keywords and notes (`simple` config with `unaccent`, so English and French both work), plus `pg_trgm` for typos and shop abbreviations.
 - The agent turns vague questions into a few targeted searches and reads the results; for one car it can often read the whole history in context.
-- Embeddings (pgvector) can be added later if the data or the questions outgrow this, without changing the rest.
+- No vector database. If vague symptom questions start missing ("clunk" vs "sway bar link noise"), add `pgvector` in the same Neon database; nothing else changes.
 
 This also covers issue #1 (Suggested tab using history).
 
@@ -88,5 +90,5 @@ Each step ships on its own; the app keeps working in between.
 3. Tools layer and agent chat for visit intake (replaces the review form). First test case: a combined invoice + inspection + quote.
 4. Advisor: verdicts, check-it-yourself, second opinion with web search.
 5. Export: zip download and Google Drive sync.
-6. Search over history, and the "ask about my car" chat.
+6. Car chat: talk things through, add or edit tasks, save observations, search history.
 7. MCP server so the Claude app can use the same tools.
