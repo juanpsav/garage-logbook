@@ -6,8 +6,8 @@ import { every, intervalLabel, repeats, scheduleFor, status } from "@/lib/logic"
 import type { Car, Data, FileRec, Item, ItemKind, Schedule, Task, Visit } from "@/lib/types";
 import { carFields, type Editor, markDone, money, QuickForm } from "./Edit";
 
-type View = "overview" | "schedule" | "documents" | "history";
-const VIEWS: [View, string][] = [["overview", "Overview"], ["schedule", "Schedule"], ["documents", "Documents"], ["history", "History"]];
+type View = "overview" | "schedule" | "documents" | "history" | "cars";
+const VIEWS: [View, string][] = [["overview", "Overview"], ["schedule", "Schedule"], ["documents", "Documents"], ["history", "History"], ["cars", "Cars"]];
 
 type Ctx = {
   data: Data; schedules: Schedule[]; src: (p: string) => string; car: string; cars: Car[];
@@ -35,7 +35,8 @@ export function GarageView({ data, schedules, src, edit }: { data: Data; schedul
   const go = (v: View, visitId?: string) => { setView(v); setOpen(visitId ?? null); setEditing(null); };
   const ctx: Ctx = { data, schedules, src, car, cars, carById, multi: all.length > 1, open, setOpen, go, edit, editing, setEditing };
 
-  if (!all.length) return <div className="empty">No cars yet. Ask your agent to add one.</div>;
+  // No cars yet: signed in, start by adding one.
+  if (!all.length) return edit ? <CarsView {...ctx} /> : <div className="empty">No cars yet.</div>;
   return (
     <>
       {all.length > 1 && (
@@ -53,7 +54,7 @@ export function GarageView({ data, schedules, src, edit }: { data: Data; schedul
           </button>
         ))}
       </nav>
-      {view === "overview" ? <Overview {...ctx} /> : view === "schedule" ? <ScheduleView {...ctx} /> : view === "documents" ? <Documents {...ctx} /> : <History {...ctx} />}
+      {view === "overview" ? <Overview {...ctx} /> : view === "schedule" ? <ScheduleView {...ctx} /> : view === "documents" ? <Documents {...ctx} /> : view === "history" ? <History {...ctx} /> : <CarsView {...ctx} />}
     </>
   );
 }
@@ -527,5 +528,94 @@ function History({ data, car, carById, multi, go, edit, editing, setEditing }: C
         );
       })}
     </Section>
+  );
+}
+
+/* ---------- cars ---------- */
+
+/** All cars: odometer, schedule, what's tracked. Signed in: add, edit, delete, find the manufacturer schedule. */
+function CarsView({ data, schedules, edit, editing, setEditing }: Ctx) {
+  const all = [...data.cars].sort((a, b) => a.created.localeCompare(b.created));
+  const [finding, setFinding] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ id: string; text: string } | null>(null);
+  const adding = editing === "car:new" || (!all.length && !!edit);
+  return (
+    <>
+      {all.length > 0 && (
+        <Section title="Cars" count={all.length}>
+          {all.map((c) => {
+            const sc = scheduleFor(c, schedules);
+            const tasks = data.tasks.filter((t) => t.carId === c.id).length;
+            const k = `cars:${c.id}`;
+            if (edit && editing === k) {
+              return (
+                <div key={c.id} className="row editing">
+                  <div className="row-main">
+                    <QuickForm onCancel={() => setEditing(null)} deleteLabel="Delete car" fields={carFields(c)}
+                      onSave={async (v) => {
+                        const km = num(v.km);
+                        await edit.put("cars", { ...c, name: v.name.trim() || c.name, km: km ?? c.km, kmDate: km != null && km !== c.km ? today() : c.kmDate });
+                        setEditing(null);
+                      }}
+                      onDelete={async () => { await edit.del("cars", c.id); setEditing(null); }} />
+                    <span className="hint">Deleting a car removes its tasks. Its documents and history stay.</span>
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <div key={c.id} className="row">
+                <div className="row-main">
+                  <span className="title">{c.name}</span>
+                  <span className="meta">
+                    {[c.km != null ? fmtKm(c.km) : null, c.kmDate ? `updated ${fmtDate(c.kmDate)}` : null, `${tasks} task${tasks === 1 ? "" : "s"}`].filter(Boolean).join(" · ")}
+                  </span>
+                  <span className="meta">
+                    {sc ? <>Schedule: {sc.sourceUrl ? <a href={sc.sourceUrl} target="_blank" rel="noopener">{sc.name} ↗</a> : sc.name}</> : "No manufacturer schedule"}
+                  </span>
+                  {msg?.id === c.id && <span className="notes">{msg.text}</span>}
+                  {edit && (
+                    <span className="row-acts">
+                      {!sc && (
+                        <button className="btn sm" disabled={finding === c.id} onClick={async () => {
+                          setFinding(c.id); setMsg(null);
+                          const err = await edit.findSchedule(c.id);
+                          setFinding(null);
+                          if (err) setMsg({ id: c.id, text: err });
+                        }}>{finding === c.id ? "Looking it up… (up to 2 min)" : "Find schedule"}</button>
+                      )}
+                      <EditBtn k={k} setEditing={setEditing} />
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </Section>
+      )}
+      {edit && (adding ? (
+        <Section title="Add a car">
+          <div className="row editing">
+            <div className="row-main">
+              <QuickForm saveLabel="Add car" onCancel={() => setEditing(null)}
+                fields={[
+                  { name: "name", label: "Year, make and model", type: "text", value: null, wide: true, required: true, placeholder: "2019 Subaru Forester" },
+                  { name: "km", label: "Odometer (km)", type: "number", value: null, required: true },
+                ]}
+                onSave={async (v) => {
+                  const km = num(v.km);
+                  if (km == null) return;
+                  const err = await edit.addCar(v.name.trim(), km);
+                  if (err) setMsg({ id: "new", text: err });
+                  else setEditing(null);
+                }} />
+              {msg?.id === "new" && <span className="notes">{msg.text}</span>}
+            </div>
+          </div>
+        </Section>
+      ) : (
+        <div className="qacts"><span className="grow" /><button className="btn sm" onClick={() => setEditing("car:new")}>Add a car</button></div>
+      ))}
+    </>
   );
 }

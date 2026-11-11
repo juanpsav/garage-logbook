@@ -205,3 +205,5 @@ select.dec{width:auto;padding:4px 10px;border-radius:999px;font-size:.78rem}
 .seg-inline button{flex:0 0 auto}
 .cta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px}
 .cta .mcp-url{align-self:auto}
+/* Two cars side by side: long status chips wrap instead of being cut off. */
+.hero .chip{white-space:normal}

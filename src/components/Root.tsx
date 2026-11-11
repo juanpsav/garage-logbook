@@ -71,8 +71,37 @@ function OwnerGarage() {
           ...d, [col]: (d[col] as { id: string }[]).filter((x) => x.id !== id),
           // A deleted visit takes its lines and pages with it.
           ...(col === "visits" && { items: d.items.filter((i) => i.visitId !== id), files: d.files.filter((f) => f.visitId !== id) }),
+          // A deleted car takes its tasks; its visits and lines stay without a car.
+          ...(col === "cars" && {
+            tasks: d.tasks.filter((t) => t.carId !== id),
+            visits: d.visits.map((v) => (v.carId === id ? { ...v, carId: null } : v)),
+            items: d.items.map((i) => (i.carId === id ? { ...i, carId: null } : i)),
+          }),
         });
         await send("DELETE", col, id);
+      },
+      addCar: async (name, km) => {
+        setError(null);
+        const r = await fetch("/api/cars", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, km }) });
+        if (!r.ok) return r.status === 401 ? "You're signed out. Reload the page and sign in." : "Couldn't add the car. Check the name and odometer.";
+        const { car, schedule } = await r.json();
+        setData((d) => d && { ...d, cars: [...d.cars, car], schedules: schedule && !d.schedules.some((x) => x.id === schedule.id) ? [...d.schedules, schedule] : d.schedules });
+        return null;
+      },
+      findSchedule: async (carId) => {
+        const r = await fetch(`/api/cars/${carId}/schedule`, { method: "POST" });
+        const j = await r.json().catch(() => null);
+        if (!r.ok) {
+          return j?.error === "not_found" ? "No official schedule found. Check the year, make and model in the name."
+            : j?.error === "rate_limited" || j?.error === "busy" ? "Today's schedule lookups are used up. Try tomorrow."
+            : "The lookup didn't finish. Try again.";
+        }
+        const sc: Schedule = j.schedule;
+        setData((d) => d && {
+          ...d, cars: d.cars.map((c) => (c.id === carId ? { ...c, scheduleId: sc.id } : c)),
+          schedules: d.schedules.some((x) => x.id === sc.id) ? d.schedules : [...d.schedules, sc],
+        });
+        return null;
       },
     };
   }, [load]);

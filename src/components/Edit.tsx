@@ -9,6 +9,10 @@ import type { Car, CollectionName, Collections, Data, Task, Visit } from "@/lib/
 export type Editor = {
   put: <K extends CollectionName>(col: K, obj: Collections[K]) => Promise<void>;
   del: (col: CollectionName, id: string) => Promise<void>;
+  /** Adds a car; resolves with an error message, or null. */
+  addCar: (name: string, km: number) => Promise<string | null>;
+  /** Finds and attaches the car's manufacturer schedule; resolves with an error message, or null. */
+  findSchedule: (carId: string) => Promise<string | null>;
 };
 
 type Field =

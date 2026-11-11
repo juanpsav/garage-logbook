@@ -8,7 +8,8 @@ const MAX_BYTES = 100_000;
 const bad = (error = "bad_request") => Response.json({ error }, { status: 400 });
 // Quick edits from the web app. Pages only arrive through upload links, so files aren't writable here.
 const EDITABLE = new Set<CollectionName>(["cars", "tasks", "visits", "items"]);
-const DELETABLE = new Set<CollectionName>(["tasks", "items", "visits"]);
+// Deleting a car removes its tasks; its visits and history stay, without a car.
+const DELETABLE = new Set<CollectionName>(["cars", "tasks", "items", "visits"]);
 const validCol = (col: string): col is CollectionName => COLLECTIONS.includes(col as CollectionName);
 
 export async function PUT(req: Request, ctx: RouteContext<"/api/data/[col]/[id]">) {
