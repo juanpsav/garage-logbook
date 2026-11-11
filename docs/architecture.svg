@@ -53,7 +53,7 @@
   <path class="line" d="M268 216 C330 216 330 270 410 270"/>
   <path class="line" d="M268 300 C330 300 330 270 410 270"/>
   <path class="line" d="M268 384 C330 384 330 270 410 270"/>
-  <text x="378" y="258" class="muted t-xs" text-anchor="middle">MCP</text>
+  <text x="384" y="244" class="muted t-xs" text-anchor="middle">MCP</text>
 
   <!-- server -->
   <rect class="box-strong" x="412" y="100" width="380" height="380" rx="20"/>
