@@ -35,7 +35,7 @@ export function GarageView({ data, schedules, src, edit }: { data: Data; schedul
   const go = (v: View, visitId?: string) => { setView(v); setOpen(visitId ?? null); setEditing(null); };
   const ctx: Ctx = { data, schedules, src, car, cars, carById, multi: all.length > 1, open, setOpen, go, edit, editing, setEditing };
 
-  if (!all.length) return <div className="empty">No cars yet. Ask your agent to add one: “Add my 2019 Subaru Forester, 139 000 km.”</div>;
+  if (!all.length) return <div className="empty">No cars yet. Ask your agent to add one.</div>;
   return (
     <>
       {all.length > 1 && (
@@ -137,7 +137,7 @@ function TaskRow({ t, s, from, ...c }: Ctx & { t: Task; s: ReturnType<typeof sta
     return (
       <div className="row editing">
         <div className="row-main">
-          <span className="title">Mark “{t.title}” done</span>
+          <span className="title">{t.title}</span>
           <QuickForm saveLabel="Mark done" onCancel={() => setEditing(null)}
             fields={[
               { name: "date", label: "Date", type: "date", value: today(), required: true },
@@ -147,7 +147,7 @@ function TaskRow({ t, s, from, ...c }: Ctx & { t: Task; s: ReturnType<typeof sta
               { name: "note", label: "Note", type: "text", value: null, wide: true, placeholder: "Optional" },
             ]}
             onSave={async (v) => { await markDone(edit, data, t, v); setEditing(null); }} />
-          <span className="hint">{repeats(t) ? "Goes to history, and the next one is scheduled." : "Goes to history and leaves your list."}</span>
+          
         </div>
       </div>
     );
@@ -211,7 +211,7 @@ function Overview(c: Ctx) {
   }, 0);
   return (
     <>
-      {!tasks.length && <div className="empty">Nothing tracked yet. Ask your agent which checks to track for your car.</div>}
+      {!tasks.length && <div className="empty">Nothing tracked yet.</div>}
       {GROUPS.map(([r, name, tone]) => {
         const grp = tasks.filter(([, s]) => s.rank === r).sort((a, b) => a[1].key - b[1].key || a[0].title.localeCompare(b[0].title));
         if (!grp.length) return null;
@@ -223,8 +223,8 @@ function Overview(c: Ctx) {
       })}
       {untracked > 0 && (
         <p className="note-line">
-          {untracked} manufacturer schedule item{untracked === 1 ? " isn't" : "s aren't"} tracked yet, so {untracked === 1 ? "it" : "they"} won&apos;t remind you.{" "}
-          <button className="link" onClick={() => go("schedule")}>See the schedule</button>
+          {untracked} schedule item{untracked === 1 ? "" : "s"} not tracked.{" "}
+          <button className="link" onClick={() => go("schedule")}>Schedule</button>
         </p>
       )}
       {quotes.length > 0 && (
@@ -270,8 +270,8 @@ function Overview(c: Ctx) {
       )}
       {unfinished.length > 0 && (
         <p className="note-line">
-          {unfinished.length === 1 ? "1 visit is" : `${unfinished.length} visits are`} still being gone through with your agent.{" "}
-          <button className="link" onClick={() => go("documents", unfinished[0].id)}>See {unfinished.length === 1 ? "it" : "them"}</button>
+          {unfinished.length === 1 ? "1 visit" : `${unfinished.length} visits`} in progress.{" "}
+          <button className="link" onClick={() => go("documents", unfinished[0].id)}>Open</button>
         </p>
       )}
     </>
@@ -290,7 +290,7 @@ function ScheduleView({ data, schedules, cars, multi }: Ctx) {
         if (!sc) {
           return (
             <div key={c.id} className="empty">
-              {multi ? <><strong>{c.name}</strong>: no </> : "No "}manufacturer schedule yet. Ask your agent to find the official one for this car.
+              {multi ? <><strong>{c.name}</strong>: no </> : "No "}manufacturer schedule yet.
             </div>
           );
         }
@@ -321,7 +321,7 @@ function ScheduleView({ data, schedules, cars, multi }: Ctx) {
           </Section>
         );
       })}
-      {cars.some((c) => scheduleFor(c, schedules)) && <p className="note-line">Reminders come from tracked items. To track the rest, tell your agent when each was last done.</p>}
+      {cars.some((c) => scheduleFor(c, schedules)) && <p className="note-line">Only tracked items send reminders.</p>}
     </>
   );
 }
@@ -337,7 +337,7 @@ function Documents(c: Ctx) {
     .filter((v) => car === "all" || !v.carId || v.carId === car)
     .filter((v) => data.files.some((f) => f.visitId === v.id) || data.items.some((i) => i.visitId === v.id && i.source === "shop"))
     .sort((a, b) => day(b).localeCompare(day(a)) || b.created.localeCompare(a.created));
-  if (!visits.length) return <div className="empty">No shop paperwork yet. Next time you get an invoice, quote or inspection sheet, tell your agent and it&apos;ll give you a link to upload the pages.</div>;
+  if (!visits.length) return <div className="empty">No paperwork yet.</div>;
   return <div className="docs">{visits.map((v) => <VisitCard key={v.id} visit={v} {...c} />)}</div>;
 }
 
@@ -367,7 +367,7 @@ function VisitCard(c: Ctx & { visit: Visit }) {
       {isOpen && (
         <div className="doc-body">
           {files.length > 0 && <div className="pages">{files.map((f, i) => <Page key={f.id} file={f} n={i + 1} src={src} />)}</div>}
-          {files.length > 0 && <p className="hint">Tap a page to open the original as uploaded.</p>}
+          {files.length > 0 && <p className="hint">Tap a page for the original.</p>}
           {edit && editing === k ? (
             <QuickForm onCancel={() => setEditing(null)} deleteLabel="Delete visit"
               fields={[
@@ -463,7 +463,7 @@ function Lines({ visit: v, items, visitCar: car, edit, editing, setEditing }: Ct
           </div>
         );
       })}
-      {edit && items.length > 0 && <p className="hint">Tap a line to fix it.</p>}
+      {edit && items.length > 0 && <p className="hint">Tap a line to edit.</p>}
     </>
   );
 }
@@ -478,7 +478,7 @@ function History({ data, car, carById, multi, go, edit, editing, setEditing }: C
   const cost = (v: Visit) => v.total ?? (done(v.id).reduce((s, i) => s + (i.cost ?? 0), 0) || null);
   const yr = today().slice(0, 4);
   const spent = entries.filter((e) => e.date?.startsWith(yr)).reduce((s, e) => s + (cost(e) || 0), 0);
-  if (!entries.length) return <div className="empty">No history yet. Work you tell your agent about, and shop visits you go through with it, show up here.</div>;
+  if (!entries.length) return <div className="empty">No history yet.</div>;
   return (
     <Section title="Done" count={entries.length} aside={spent > 0 ? <span className="muted"><span className="mono">{fmtMoney(spent)}</span> in {yr}</span> : null}>
       {entries.map((e) => {

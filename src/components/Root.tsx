@@ -29,7 +29,7 @@ export function Garage({ owner, signInEnabled, mcpUrl }: { owner: OwnerInfo; sig
         <h1 className="brand"><Mark />Garage Logbook</h1>
         <div className="top-acts">{account}</div>
       </header>
-      {owner ? <><ConnectCard mcpUrl={mcpUrl} /><OwnerGarage /></> : <Landing mcpUrl={mcpUrl} signIn={signIn} />}
+      {owner ? <><ConnectCard mcpUrl={mcpUrl} /><OwnerGarage /></> : <Landing mcpUrl={mcpUrl} />}
     </div>
   );
 }
@@ -87,42 +87,29 @@ function OwnerGarage() {
   );
 }
 
-// What an agent can call, as listed by the MCP server (src/server/mcp).
-const TOOLS: [string, string[]][] = [
-  ["Read", ["get_garage", "whats_due", "get_visit", "get_pages", "search_history", "list_suggestions"]],
-  ["Paperwork", ["start_visit", "upload_link", "add_items", "update_item", "update_visit", "confirm_visit"]],
-  ["Upkeep", ["add_car", "find_schedule", "track_suggestions", "create_task", "complete_task", "log_work", "set_odometer"]],
+// The MCP server's tools (src/server/mcp).
+const TOOLS = [
+  "get_garage", "whats_due", "add_car", "find_schedule", "track_suggestions", "start_visit", "upload_link", "get_pages",
+  "add_items", "confirm_visit", "create_task", "complete_task", "log_work", "set_odometer", "search_history",
 ];
 
-/** Signed out: what this is (an MCP server for car upkeep), and a sample of what it keeps. */
-function Landing({ mcpUrl, signIn }: { mcpUrl: string; signIn: (() => void) | null }) {
+/** Signed out: what this is, its address, its tools, and a sample of what it keeps. */
+function Landing({ mcpUrl }: { mcpUrl: string }) {
   const [data] = useState(() => demoData(today()));
   return (
     <>
       <section className="intro">
-        <span className="eyebrow">MCP server</span>
-        <h2 className="display">Your car&apos;s logbook, kept by your AI agent.</h2>
-        <p>Connect Claude, Meta Muse or any MCP client. It reads your shop paperwork, tracks what&apos;s due and records the work. This app keeps the data and the original documents.</p>
+        <h2 className="display">MCP server for car maintenance.</h2>
+        <p>Your agent reads shop paperwork, tracks service and keeps the records here.</p>
         <McpUrl mcpUrl={mcpUrl} />
         <ConnectSteps mcpUrl={mcpUrl} />
       </section>
-
       <section className="tools">
-        <h3>What your agent can call</h3>
-        {TOOLS.map(([group, names]) => (
-          <div key={group} className="tool-row">
-            <span className="tool-group">{group}</span>
-            <span className="tool-names">{names.map((n) => <code key={n}>{n}</code>)}</span>
-          </div>
-        ))}
+        <h3>Tools</h3>
+        <span className="tool-names">{TOOLS.map((n) => <code key={n}>{n}</code>)}</span>
       </section>
-
       <section className="sample">
-        <div className="sample-h">
-          <h3>What you see here</h3>
-          <span className="chip">Sample garage</span>
-          {signIn && <button className="btn sm ghost push-r" onClick={signIn}>Sign in for yours</button>}
-        </div>
+        <h3>Sample garage</h3>
         <GarageView data={data} schedules={seedSchedules as Schedule[]} src={demoFile} />
       </section>
     </>

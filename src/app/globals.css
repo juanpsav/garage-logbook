@@ -186,15 +186,15 @@ select.dec{width:auto;padding:4px 10px;border-radius:999px;font-size:.78rem}
 /* signed-out page */
 .intro{display:flex;flex-direction:column;gap:12px;padding:20px 0 4px}
 .eyebrow{font-size:.75rem;font-weight:500;color:var(--muted);letter-spacing:.02em}
-.display{font-size:clamp(1.6rem,4.5vw,2.2rem);font-weight:600;letter-spacing:-.035em;line-height:1.1;max-width:18ch}
-.intro p{margin:0;color:var(--muted);max-width:56ch;font-size:.95rem}
+.display{font-size:clamp(1.6rem,4.5vw,2.2rem);font-weight:600;letter-spacing:-.035em;line-height:1.1;max-width:16ch}
+.intro p{margin:0;color:var(--muted);max-width:64ch;font-size:.95rem;text-wrap:pretty}
 .how summary{cursor:pointer;color:var(--muted);font-size:.8125rem;width:max-content}
 .how[open] summary{margin-bottom:8px}
 .how .steps{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:.8125rem}
 .how .steps strong{color:var(--ink);font-weight:500}
 .how .steps code{font-size:.75rem;background:var(--sunken);border:1px solid var(--line);padding:1px 5px;border-radius:6px;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 .tools{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:18px}
-.tools h3,.sample-h h3{font-size:.8125rem;font-weight:600}
+.tools h3,.sample h3{font-size:.8125rem;font-weight:600}
 .tool-row{display:grid;grid-template-columns:6.5em 1fr;gap:10px;align-items:baseline}
 .tool-group{font-size:.78rem;color:var(--muted)}
 .tool-names{display:flex;flex-wrap:wrap;gap:6px}

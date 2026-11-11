@@ -20,12 +20,11 @@ export function McpUrl({ mcpUrl }: { mcpUrl: string }) {
 export function ConnectSteps({ mcpUrl }: { mcpUrl: string }) {
   return (
     <details className="how">
-      <summary>How to connect</summary>
+      <summary>Connect</summary>
       <ul className="steps">
-        <li><strong>Claude</strong> (web, desktop, phone): Settings → Connectors → Add custom connector, paste the address, keep the detected settings, sign in with Google and allow.</li>
-        <li><strong>Claude Code:</strong> <code>claude mcp add --transport http garage {mcpUrl}</code>, then <code>/mcp</code> to sign in.</li>
-        <li><strong>Meta Muse:</strong> add the address as a remote MCP server in Muse&apos;s connections, then sign in with Google and allow.</li>
-        <li><strong>Any other MCP client:</strong> add it as a remote (Streamable HTTP) server; it signs in with OAuth.</li>
+        <li><strong>Claude</strong>: Settings → Connectors → Add custom connector.</li>
+        <li><strong>Claude Code</strong>: <code>claude mcp add --transport http garage {mcpUrl}</code></li>
+        <li><strong>Meta Muse</strong> and other MCP clients: add it as a remote MCP server.</li>
       </ul>
     </details>
   );
@@ -35,8 +34,8 @@ export function ConnectSteps({ mcpUrl }: { mcpUrl: string }) {
 export function ConnectCard({ mcpUrl }: { mcpUrl: string }) {
   return (
     <section className="card connect">
-      <h2>Your agent keeps this up to date</h2>
-      <p className="small flush">Ask it to add a car, go through shop paperwork or log work. Small fixes can be made here.</p>
+      <h2>Changes go through your agent</h2>
+      <p className="small flush">Small fixes can be made here.</p>
       <McpUrl mcpUrl={mcpUrl} />
       <ConnectSteps mcpUrl={mcpUrl} />
     </section>
