@@ -1,94 +1,64 @@
 # Agent-first redesign
 
-Status: proposal, November 2026.
+Status: revised November 10, 2026. Supersedes the first version of this doc (in git history), whose visit chat and car chat shipped in 149e8b8.
 
 ## Why
 
-Shop paperwork is hard to read, for people and models alike. One visit can produce an invoice for the work done, inspection notes handwritten under the invoice lines, and a quote on page 2, all on the same document, in shop jargon, partly illegible. The current flow assumes each document has one type and that a model can read it on its own. Neither holds.
+Shop paperwork is hard to read, for people and models alike: one visit mixes an invoice, inspection notes handwritten under its lines, and a quote on another page, in shop jargon, partly illegible. The owner knows things the paper doesn't (what the tech said, what they agreed to), and wants help judging what really needs doing.
 
-The person who was at the counter knows things the paper doesn't: what the technician said, what they agreed to, what they declined. So reading a document should be a conversation, and the app should also help judge what the shop recommends: what's needed now, what can wait, what looks like an upsell, and how to check it yourself.
+The first build put a chat inside the app. It works, but it is a regular app with a chat added: the owner still picks tabs, fills forms, and comes back to check. Chat, voice, photos, memory, web search, scheduled check-ins and drafting emails are what general agents (a Claude session; possibly others) already do, and do better every month. Rebuilding them here is the wrong job.
 
 ## The idea
 
-**A shop visit, gone through with an agent.**
-
-1. You upload the pages of a visit (any mix of invoice, inspection, quote).
-2. The agent reads them and posts a first pass: each line sorted as **done**, **found** (inspection finding) or **quoted**, with a plain-English explanation and a flag on anything it couldn't read. It asks only about what it's unsure of.
-3. You answer in your own words (typing or the phone keyboard's microphone): "front brakes are fine, they want the rears done before winter, the sway bar thing can wait".
-4. The agent updates the visit through tools while a live card beside the chat shows the result. You confirm it.
-5. The conversation is kept with the visit: your account of what the shop said, next to their paperwork.
-
-**A chat per car, outside visits.** You can talk to the agent about a car at any time: "I hear a clunk from the front left over bumps", "add a tire rotation every 10,000 km", "should I worry about this rust spot?" with a photo. It talks it through, creates or edits tasks, and saves an **observation**, a `found` item that came from you rather than a shop, with an optional photo. When a later visit deals with it, the agent links the two.
-
-The Maintenance, Suggested and Cars views stay; they become views of better data rather than the main way in.
-
-## Advisor
-
-For each quoted or found item the advisor gives:
-
-- **Verdict:** needed now / can wait until (km or date) / likely an upsell / ask the shop first, with the evidence it used: measurements on the document, the car's km and history, the manufacturer schedule, known issues and typical prices.
-- **Check it yourself:** what to look at, which tool, which threshold, and safety notes. When a DIY check isn't realistic (e.g. ball joints need a lift), it says so and suggests a second opinion.
-- **What to ask the shop:** e.g. "show me the measurement", "can I see the old part".
-
-Your own checks (a photo, "front pads 6 mm") are saved as evidence on the visit and used in later verdicts. The advisor cites sources where it can and says plainly it isn't a mechanic; brakes, steering and tires get a lower bar for "get a second opinion".
-
-## Architecture
+**The owner's own agent is the front end and does the reasoning. This app is the storage and the harness.**
 
 ```
-                 ┌──────────── Backend (ours) ───────────────────────────┐
- Web app chat ──▶│ Agent loop (Claude API) ─▶ Tools ─▶ Postgres + Blob   │
- Claude app  ───▶│ MCP server (same tools, OAuth via our sign-in)        │
-                 │ Export: zip download, Google Drive sync               │
-                 └───────────────────────────────────────────────────────┘
+ Your agent (claude.ai / Claude apps / Claude Code; any MCP client)
+   chat, voice, photos, memory, web search, scheduled check-ins, email drafts
+        │  MCP over HTTPS, OAuth sign-in to your garage
+        ▼
+ Garage backend (ours)
+   tools     get_garage, whats_due, add_visit, add_items, update_item, create/update/complete_task,
+             set_odometer, log_work, search_history, upload_link, get_pages, confirm_visit
+   rules     due-date logic, manufacturer schedules, validation, history integrity
+   guidance  how to read shop paperwork and advise (MCP server instructions + a Skill)
+   storage   Postgres + private Blob, originals kept, export / Google Drive
+        ▲
+ Web app: a window on the data (what's due, history, visits and pages, uploads, export) and a demo
 ```
 
-- **Tools are the core.** All logic lives in a tools layer (`add_item`, `update_item`, `create_task`, `set_odometer`, `search_records`, `get_schedule`, …) that reads and writes our own tables. The web chat and the MCP server are two clients of the same tools.
-- **Models are replaceable.** Claude Sonnet 5.5 runs the conversation and reads documents. Claude Opus 5.5 with web search handles an explicit "second opinion" on a quote (recalls, bulletins, typical prices). Swapping models touches one module.
-- **No Cohere.** Every job it could do here (reading, ranking, page search, classification, translation) is done by Claude in the same pass or by Postgres for free, and it would add a vendor, a key, trial limits and another third party holding the documents.
-- **Data stays ours.** Neon Postgres and private Vercel Blob; export and Drive sync mean nothing depends on the app staying up.
-- **Costs** stay capped with the existing daily per-user and shared buckets (`src/server/limits.ts`), counted per agent turn. Guests can't run the agent; they get a read-only sample visit to look at.
+- **Storage** is what exists: tables for cars, visits, items, tasks, files and messages, original files in Blob.
+- **Harness** is the tools, with the rules enforced server-side so any agent writes correct data, plus guidance on doing it well: sort lines into done / found / quoted, take the owner's word over the paper, explain jargon, flag upsells, give check-it-yourself steps, never invent numbers.
+- **Front end** is whichever agent the owner uses. Claude first: a custom connector in claude.ai and the Claude apps (phone included), and `claude mcp add` in Claude Code. Other agents work if they speak MCP.
 
-## Data model
+## Files
 
-Structured only where the app computes something; everything else is text.
+Agents generally can't pass a photo from the chat into a tool call, but the originals must land in our storage. So:
 
-| Table | Holds |
-|---|---|
-| `cars` | name, km, km date, schedule id |
-| `visits` | car, date, km, shop, total, summary, status (draft / in conversation / confirmed) |
-| `files` | visit, page order, original file in Blob, derived copies (read size, thumbnail) |
-| `items` | car, visit (null for your own observations), source (shop / you), kind (`done` / `found` / `quoted`), original text, plain text, cost, page, confidence, keywords (`text[]`), your note, decision for quotes (pending / accepted / declined / deferred), advisor verdict (`jsonb`) |
-| `messages` | car, visit (null for the car chat), role, content, created |
-| `tasks` | as today: car, title, due date/km, repeat rule, source item |
+- `upload_link` returns a short-lived link; the owner taps it and their phone uploads the pages straight into a visit.
+- `get_pages` returns a visit's stored pages to the agent as images (MCP tool results can carry images), so the agent reads the originals.
+- Later: a forwarding email address for invoices shops send by email.
 
-- History is the `done` items of confirmed visits. Manual history entries become a visit with one item.
-- There is **no component taxonomy**. The agent writes the plain-English line and a few free keywords (synonyms, English and French) per item; that's what search runs on.
-- Guest mode stays in browser storage with the same shapes.
+## Proactive
 
-## Search
+The owner's agent does check-ins when it can schedule them ("every Monday, check my garage"): it calls `whats_due` and messages the owner. `whats_due` returns what needs attention: tasks due or late, quotes about to expire, stale odometer, seasonal deadlines (winter tires by December 1 in Quebec), open observations. Where the agent can't schedule, the backend sends a short daily email only when something needs attention.
 
-No LLM or embedding service is needed at this size (a few cars, hundreds of items over years).
+## Auth and security
 
-- Postgres full-text search over plain text, original text, keywords and notes (`simple` config with `unaccent`, so English and French both work), plus `pg_trgm` for typos and shop abbreviations.
-- The agent turns vague questions into a few targeted searches and reads the results; for one car it can often read the whole history in context.
-- No vector database. If vague symptom questions start missing ("clunk" vs "sway bar link noise"), add `pgvector` in the same Neon database; nothing else changes.
+- OAuth 2.1 with dynamic client registration through `@better-auth/oauth-provider`, on top of the existing Google sign-in. The owner approves each agent once; tokens are revocable from the web app.
+- Every tool acts only on the signed-in owner's rows (already true in the tools layer). Daily caps stay for anything that costs us money (schedule lookups).
+- Model costs move to the owner's own agent subscription; the backend makes no model calls for MCP traffic.
 
-This also covers issue #1 (Suggested tab using history).
+## Web app
 
-## Your documents stay yours
-
-- **Keep originals.** Today photos are stored shrunk to 2000 px JPEG; only PDFs are kept as uploaded. Store the original file untouched and make derived copies for reading and thumbnails. (Already-uploaded photos can't be restored to full size.)
-- **Export everything:** one zip, `Car/Year/Date Shop – summary/` with the original pages and a readable `visit.pdf` (items, your notes, advisor verdicts), plus `history.csv` and `garage.json`.
-- **Google Drive sync:** "Connect Google Drive" asks for the `drive.file` scope only (the app sees only files it creates). The app keeps a "Garage Logbook" folder with the same layout and copies each confirmed visit there.
+Shrinks to a dashboard: what's due, history, visits with their pages and lines, uploads, export and settings (connected agents, Drive). Forms stay only for quick corrections. The built-in chat stays as a capped demo so recruiters can see the harness without bringing their own agent; it is no longer where new work goes.
 
 ## Steps
 
-Each step ships on its own; the app keeps working in between.
-
-1. Keep original uploads.
-2. New tables and a migration of existing records.
-3. Tools layer and agent chat for visit intake (replaces the review form). First test case: a combined invoice + inspection + quote.
-4. Advisor: verdicts, check-it-yourself, second opinion with web search.
-5. Export: zip download and Google Drive sync.
-6. Car chat: talk things through, add or edit tasks, save observations, search history.
-7. MCP server so the Claude app can use the same tools.
+1. MCP server at `/api/mcp` with OAuth; tools wrapped from `src/server/agent/tools.ts` plus `get_garage`, `whats_due`, `upload_link`, `get_pages`.
+2. Harness guidance: server instructions and a Skill, from the current system prompt.
+3. Test with a Claude session on a real combined invoice / inspection / quote.
+4. Dashboard: trim the web app; connected-agents settings; demo garage.
+5. Export (zip) and Google Drive sync.
+6. Daily email fallback for agents that can't schedule.
+7. Search: Postgres full-text + pg_trgm behind `search_history`; Suggested-tab history (#1).
