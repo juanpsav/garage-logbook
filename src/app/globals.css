@@ -203,3 +203,10 @@ select.dec{width:auto;padding:4px 10px;border-radius:999px;font-size:.78rem}
 .sample{display:flex;flex-direction:column;gap:14px;border-top:1px solid var(--line);padding-top:18px}
 .sample-h{display:flex;align-items:center;gap:8px}
 .push-r{margin-left:auto}
+.diagram{margin:0}
+/* Wider than the text column on large screens so the labels stay readable. */
+@media (min-width:800px){.diagram{margin-inline:calc(-1 * min(140px, (100vw - 760px) / 2))}}
+.diagram img{display:block;width:100%;height:auto;border-radius:var(--r)}
+.foot{border-top:1px solid var(--line);padding-top:16px;font-size:.8125rem;color:var(--muted)}
+.foot a{color:var(--muted);text-underline-offset:3px}
+.foot a:hover{color:var(--ink)}

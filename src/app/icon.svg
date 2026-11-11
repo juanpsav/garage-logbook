@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <style>
+    .s{stroke:#18181b}.f{fill:#18181b}
+    @media (prefers-color-scheme: dark){.s{stroke:#f4f4f5}.f{fill:#f4f4f5}}
+  </style>
+  <circle class="s" cx="12" cy="12" r="10.25" fill="none" stroke-width="2"/>
+  <path class="s" d="M6.5 15.5a6 6 0 1 1 11 0" fill="none" stroke-width="2" stroke-linecap="round"/>
+  <path class="s" d="M12 13.5 15.5 9" stroke-width="2.2" stroke-linecap="round"/>
+  <circle class="f" cx="12" cy="13.5" r="1.6"/>
+</svg>

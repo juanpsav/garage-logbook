@@ -104,6 +104,10 @@ function Landing({ mcpUrl }: { mcpUrl: string }) {
         <McpUrl mcpUrl={mcpUrl} />
         <ConnectSteps mcpUrl={mcpUrl} />
       </section>
+      <figure className="diagram">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/architecture.svg" width={1144} height={444} alt="Claude, Meta Muse, Dot or any MCP client connect over MCP to the Garage Logbook server, which stores records in Postgres and original pages in Blob storage, and serves this web app." />
+      </figure>
       <section className="tools">
         <h3>Tools</h3>
         <span className="tool-names">{TOOLS.map((n) => <code key={n}>{n}</code>)}</span>
@@ -112,6 +116,9 @@ function Landing({ mcpUrl }: { mcpUrl: string }) {
         <h3>Sample garage</h3>
         <GarageView data={data} schedules={seedSchedules as Schedule[]} src={demoFile} />
       </section>
+      <footer className="foot">
+        <a href="https://github.com/juanpsav/garage-logbook" target="_blank" rel="noopener">GitHub</a>
+      </footer>
     </>
   );
 }
