@@ -57,14 +57,17 @@ export async function whatsDue(userId: string, today: string) {
     }
   }
 
-  // Quebec: winter tires are required from December 1 to March 15.
-  const tireWork = (days: number) => items.some((i) => i.kind === "done" && /tire|tyre|pneu/i.test(`${i.text} ${i.original ?? ""} ${i.keywords.join(" ")}`)
-    && (() => { const d = (i.visitId && visitById.get(i.visitId)?.date) || i.created.slice(0, 10); return daysBetween(d, today) <= days; })());
-  if (cars.length && inWindow(today, "10-15", "12-01") && !tireWork(60)) {
-    attention.push({ kind: "season", title: "Winter tires", detail: "Required in Quebec from December 1. No tire change recorded this fall." });
-  }
-  if (cars.length && inWindow(today, "03-15", "05-15") && !tireWork(45)) {
-    upcoming.push({ kind: "season", title: "Summer tires", detail: "Winter tires can come off after March 15; they wear fast once it's warm." });
+  // Quebec: winter tires are required from December 1 to March 15. Each car needs its own change.
+  const tireWork = (carId: string, days: number) => items.some((i) => i.carId === carId && i.kind === "done"
+    && /tire|tyre|pneu/i.test(`${i.text} ${i.original ?? ""} ${i.keywords.join(" ")}`)
+    && daysBetween((i.visitId && visitById.get(i.visitId)?.date) || i.created.slice(0, 10), today) <= days);
+  for (const c of cars) {
+    if (inWindow(today, "10-15", "12-01") && !tireWork(c.id, 60)) {
+      attention.push({ kind: "season", car: c.name, title: "Winter tires", detail: "Required in Quebec from December 1. No tire change recorded for this car this fall.", ids: { carId: c.id } });
+    }
+    if (inWindow(today, "03-15", "05-15") && !tireWork(c.id, 45)) {
+      upcoming.push({ kind: "season", car: c.name, title: "Summer tires", detail: "Winter tires can come off after March 15; they wear fast once it's warm.", ids: { carId: c.id } });
+    }
   }
 
   return { today, attention, upcoming, quiet: !attention.length && !upcoming.length };
