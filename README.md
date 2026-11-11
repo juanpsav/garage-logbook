@@ -6,22 +6,9 @@ Live: https://garage-logbook.vercel.app (signed out, it shows a sample garage).
 
 ## How it fits together
 
-```
- Your agent (claude.ai, Claude apps, Claude Code, Meta Muse, any MCP client)
-   chat, voice, photos, reasoning, scheduled check-ins
-        │  MCP over HTTPS, OAuth sign-in (Google)
-        ▼
- Garage backend (this repo)
-   /api/mcp      tools: get_garage, whats_due, add_car, find_schedule, list_suggestions,
-                 track_suggestions, start_visit, upload_link, get_pages, add_items,
-                 update_visit, confirm_visit, create/update/complete_task, log_work,
-                 set_odometer, search_history, delete_visit, …
-   rules         due dates by time and km, manufacturer schedules, Quebec winter-tire dates
-   guidance      how to read shop paperwork and advise (sent to every agent on connect)
-   storage       Postgres (Neon) + private Vercel Blob; original files kept untouched
-        ▲
- Web app: what's due, the manufacturer schedule, the documents and history, with quick fixes
-```
+![Agents (Claude, Meta Muse, Dot or any MCP client) connect over MCP to the Garage Logbook server, which keeps records in Postgres and original pages in Blob storage, and serves the web app.](docs/architecture.svg)
+
+Tools: `get_garage`, `whats_due`, `add_car`, `update_car`, `delete_car`, `find_schedule`, `list_suggestions`, `track_suggestions`, `start_visit`, `upload_link`, `get_visit`, `get_pages`, `add_items`, `update_item`, `delete_item`, `update_visit`, `confirm_visit`, `delete_visit`, `create_task`, `update_task`, `delete_task`, `complete_task`, `log_work`, `set_odometer`, `search_history`.
 
 - **Shop paperwork.** One visit often mixes an invoice, inspection notes handwritten under its lines, and a quote. The agent starts a visit and gives you a one-tap upload link, so the originals land in your storage; it then reads the pages (`get_pages` returns them as images) and records every line as done, found or quoted, in plain English next to the original wording. What you heard at the counter overrides the paperwork.
 - **What's due.** `whats_due` is plain code, no model: late and upcoming tasks, quotes waiting on a decision, your own notes, a stale odometer, unfinished visits, and seasonal deadlines. An agent that can run on a schedule calls it and only speaks up when there's something to say.

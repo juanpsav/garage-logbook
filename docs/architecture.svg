@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" width="1200" height="560" font-family="Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <title>Garage Logbook: agents connect over MCP to the server, which keeps data in Postgres and original pages in Blob storage</title>
+  <style>
+    .bg{fill:#f5f5f4}
+    .box{fill:#ffffff;stroke:#e7e5e4;stroke-width:1.5}
+    .box-strong{fill:#ffffff;stroke:#18181b;stroke-width:1.5}
+    .dash{fill:none;stroke:#d6d3d1;stroke-width:1.5;stroke-dasharray:5 5}
+    .chip{fill:#f7f7f6;stroke:#e7e5e4;stroke-width:1}
+    .ink{fill:#18181b}
+    .muted{fill:#71717a}
+    .line{stroke:#a1a1aa;stroke-width:1.5;fill:none}
+    .arrow{fill:#a1a1aa}
+    .t-lg{font-size:22px;font-weight:600;letter-spacing:-.02em}
+    .t-md{font-size:16px;font-weight:600}
+    .t-sm{font-size:13px}
+    .t-xs{font-size:12px}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, monospace;font-size:12px}
+    @media (prefers-color-scheme: dark){
+      .bg{fill:#0c0c0d}
+      .box{fill:#161618;stroke:#26262a}
+      .box-strong{fill:#161618;stroke:#f4f4f5}
+      .dash{stroke:#34343a}
+      .chip{fill:#1c1c1f;stroke:#26262a}
+      .ink{fill:#f4f4f5}
+      .muted{fill:#a1a1aa}
+      .line{stroke:#71717a}
+      .arrow{fill:#71717a}
+    }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 10 5 0 10z" class="arrow"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1200" height="560" rx="24"/>
+
+  <!-- agents -->
+  <text x="48" y="78" class="muted t-sm">Your agent</text>
+  <rect class="box" x="48" y="100" width="220" height="64" rx="16"/>
+  <text x="70" y="139" class="ink t-md">Claude</text>
+  <rect class="box" x="48" y="184" width="220" height="64" rx="16"/>
+  <text x="70" y="223" class="ink t-md">Meta Muse</text>
+  <rect class="box" x="48" y="268" width="220" height="64" rx="16"/>
+  <text x="70" y="307" class="ink t-md">Dot</text>
+  <rect class="dash" x="48" y="352" width="220" height="64" rx="16"/>
+  <text x="70" y="391" class="muted t-md">Any MCP client</text>
+  <text x="48" y="456" class="muted t-xs">Chat, voice, photos, reasoning,</text>
+  <text x="48" y="474" class="muted t-xs">scheduled check-ins</text>
+
+  <!-- agent → server -->
+  <path class="line" d="M268 132 C330 132 330 270 410 270" marker-end="url(#a)"/>
+  <path class="line" d="M268 216 C330 216 330 270 410 270"/>
+  <path class="line" d="M268 300 C330 300 330 270 410 270"/>
+  <path class="line" d="M268 384 C330 384 330 270 410 270"/>
+  <text x="378" y="258" class="muted t-xs" text-anchor="middle">MCP</text>
+
+  <!-- server -->
+  <rect class="box-strong" x="412" y="100" width="380" height="380" rx="20"/>
+  <text x="438" y="142" class="ink t-lg">Garage Logbook</text>
+  <text x="438" y="166" class="muted t-sm">MCP server · OAuth sign-in with Google</text>
+
+  <text x="438" y="208" class="muted t-xs">Read</text>
+  <rect class="chip" x="438" y="218" width="92" height="26" rx="13"/><text x="450" y="235" class="ink mono">get_garage</text>
+  <rect class="chip" x="538" y="218" width="88" height="26" rx="13"/><text x="550" y="235" class="ink mono">whats_due</text>
+  <rect class="chip" x="634" y="218" width="84" height="26" rx="13"/><text x="646" y="235" class="ink mono">get_pages</text>
+
+  <text x="438" y="274" class="muted t-xs">Paperwork</text>
+  <rect class="chip" x="438" y="284" width="96" height="26" rx="13"/><text x="450" y="301" class="ink mono">start_visit</text>
+  <rect class="chip" x="542" y="284" width="88" height="26" rx="13"/><text x="554" y="301" class="ink mono">add_items</text>
+  <rect class="chip" x="638" y="284" width="112" height="26" rx="13"/><text x="650" y="301" class="ink mono">confirm_visit</text>
+
+  <text x="438" y="340" class="muted t-xs">Upkeep</text>
+  <rect class="chip" x="438" y="350" width="74" height="26" rx="13"/><text x="450" y="367" class="ink mono">add_car</text>
+  <rect class="chip" x="520" y="350" width="112" height="26" rx="13"/><text x="532" y="367" class="ink mono">find_schedule</text>
+  <rect class="chip" x="640" y="350" width="120" height="26" rx="13"/><text x="652" y="367" class="ink mono">complete_task</text>
+
+  <line x1="438" y1="402" x2="766" y2="402" class="line" stroke-dasharray="2 4"/>
+  <text x="438" y="430" class="muted t-xs">Rules: due dates by time and km, manufacturer</text>
+  <text x="438" y="448" class="muted t-xs">schedules, date checks, upload links</text>
+
+  <!-- server → storage -->
+  <path class="line" d="M792 170 L920 170" marker-end="url(#a)"/>
+  <path class="line" d="M792 290 L920 290" marker-end="url(#a)"/>
+  <path class="line" d="M920 410 L792 410" marker-end="url(#a)"/>
+
+  <rect class="box" x="922" y="120" width="230" height="100" rx="16"/>
+  <text x="944" y="158" class="ink t-md">Postgres</text>
+  <text x="944" y="182" class="muted t-xs">cars · visits · lines</text>
+  <text x="944" y="200" class="muted t-xs">tasks · history</text>
+
+  <rect class="box" x="922" y="240" width="230" height="100" rx="16"/>
+  <text x="944" y="278" class="ink t-md">Blob storage</text>
+  <text x="944" y="302" class="muted t-xs">original invoices, quotes</text>
+  <text x="944" y="320" class="muted t-xs">and inspection sheets</text>
+
+  <rect class="box" x="922" y="360" width="230" height="100" rx="16"/>
+  <text x="944" y="398" class="ink t-md">Web app</text>
+  <text x="944" y="422" class="muted t-xs">what's due, schedule,</text>
+  <text x="944" y="440" class="muted t-xs">documents · quick fixes</text>
+</svg>
