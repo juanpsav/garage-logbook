@@ -110,7 +110,7 @@ function Landing({ mcpUrl, signIn }: { mcpUrl: string; signIn: (() => void) | nu
           </section>
           <figure className="diagram">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/architecture.svg" width={1144} height={444} alt="Claude, Meta Muse, Grok or any MCP client connect over MCP to the Garage Logbook server, which stores records in Postgres and original pages in Blob storage, and serves this web app." />
+            <img src="/architecture.svg" width={1144} height={444} alt="Claude, Meta Muse, Grok Bot or any MCP client connect over MCP to the Garage Logbook server, which stores records in Postgres and original pages in Blob storage, and serves this web app." />
           </figure>
         </>
       ) : (

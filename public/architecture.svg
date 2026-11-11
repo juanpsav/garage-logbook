@@ -42,7 +42,7 @@
   <rect class="box" x="48" y="184" width="220" height="64" rx="16"/>
   <text x="70" y="223" class="ink t-md">Meta Muse</text>
   <rect class="box" x="48" y="268" width="220" height="64" rx="16"/>
-  <text x="70" y="307" class="ink t-md">Grok</text>
+  <text x="70" y="307" class="ink t-md">Grok Bot</text>
   <rect class="dash" x="48" y="352" width="220" height="64" rx="16"/>
   <text x="70" y="391" class="muted t-md">Any MCP client</text>
   <text x="48" y="456" class="muted t-xs">Chat, voice, photos, reasoning,</text>
