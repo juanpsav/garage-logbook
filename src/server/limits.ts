@@ -6,21 +6,13 @@ const envInt = (name: string, fallback: number) => {
   return Number.isFinite(n) && n >= 0 ? n : fallback;
 };
 
-/** Daily limits for assistant messages and schedule lookups. All overridable from Vercel's environment settings. */
+/** Daily limits for schedule lookups (web research with Claude) and uploads. All overridable from Vercel's environment settings. */
 export const LIMITS = {
-  // One "turn" is one message to the assistant, however many steps it takes to answer.
-  agentAdmin: envInt("AGENT_LIMIT_ADMIN", 300),
   adminSchedules: envInt("SCHEDULE_LIMIT_ADMIN", 10),
   // Anyone can sign up, so signed-in users get modest caps each, plus a cap across all of them.
-  agentMember: envInt("AGENT_LIMIT_MEMBER", 20),
-  agentMemberTotal: envInt("AGENT_LIMIT_MEMBER_TOTAL", 100),
   memberSchedules: envInt("SCHEDULE_LIMIT_MEMBER", 1),
   memberSchedulesTotal: envInt("SCHEDULE_LIMIT_MEMBER_TOTAL", 3),
   memberUploads: envInt("UPLOAD_LIMIT_MEMBER", 80),
-  // Schedule lookups cost far more than reads (web research with Claude), so guests get few.
-  guestSchedulesPerDevice: envInt("SCHEDULE_LIMIT_GUEST_DEVICE", 1),
-  guestSchedulesPerIp: envInt("SCHEDULE_LIMIT_GUEST_IP", 1),
-  guestSchedulesTotal: envInt("SCHEDULE_LIMIT_GUEST_TOTAL", 3),
 };
 
 /** Daily caps for a signed-in user: their own, plus one shared by all non-admin users. */

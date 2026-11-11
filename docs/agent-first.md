@@ -51,7 +51,9 @@ The owner's agent does check-ins when it can schedule them ("every Monday, check
 
 ## Web app
 
-Shrinks to a dashboard: what's due, history, visits with their pages and lines, uploads, export and settings (connected agents, Drive). Forms stay only for quick corrections. The built-in chat stays as a capped demo so recruiters can see the harness without bringing their own agent; it is no longer where new work goes.
+Done (November 10, 2026): the web app is read only. Signed in: Overview (what's due, quotes waiting on a decision, your notes), Documents (every visit with its original pages and lines) and History, under a card with the MCP address and how to connect. Signed out: the same views over a sample garage. The forms, the in-app chat, browser-only guest mode and the write APIs are gone; cars, schedules and suggested checks moved to MCP tools (add_car, update_car, delete_car, find_schedule, list_suggestions, track_suggestions, delete_visit).
+
+The original plan: shrinks to a dashboard: what's due, history, visits with their pages and lines, uploads, export and settings (connected agents, Drive). Forms stay only for quick corrections. The built-in chat stays as a capped demo so recruiters can see the harness without bringing their own agent; it is no longer where new work goes.
 
 ## Steps
 

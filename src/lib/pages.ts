@@ -1,6 +1,5 @@
 import { now, uid } from "./dates";
 import { isPdf, MAX_READ_PAGES, pdfToImages, shrink } from "./files";
-import { StoreError } from "./store";
 import type { FileRec } from "./types";
 
 export type PutFile = (blob: Blob, type: string) => Promise<string>;
@@ -24,7 +23,7 @@ export async function preparePages(files: File[], put: PutFile, visitId: string,
       }
     } else {
       let b: Blob;
-      try { b = await shrink(f, 2000); } catch { throw new StoreError("decode", "decode"); }
+      try { b = await shrink(f, 2000); } catch { throw new Error(`Couldn't open ${f.name || "that image"}`); }
       const view = await put(b, "image/jpeg");
       const orig = keepOriginal ? await put(f, f.type || "image/jpeg") : view;
       out.push({ ...base(), type: f.type || "image/jpeg", name: f.name || null, orig, view });

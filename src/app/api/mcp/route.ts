@@ -3,7 +3,8 @@ import { createMcpHandler } from "@modelcontextprotocol/server";
 import { getAuth, mcpResource } from "@/server/auth";
 import { buildServer } from "@/server/mcp/server";
 
-export const maxDuration = 60;
+// find_schedule researches the web and can take a couple of minutes.
+export const maxDuration = 300;
 
 /**
  * The garage as an MCP server, for the owner's own agent (claude.ai connector, Claude Code, any MCP client).

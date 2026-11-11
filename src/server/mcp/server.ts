@@ -9,6 +9,7 @@ import { runTool, TOOLS, type ToolCtx } from "../agent/tools";
 import { whatsDue } from "../due";
 import { getRecord, listRecords, putRecord } from "../garage";
 import { makeUploadToken, uploadUrl } from "../upload-token";
+import { registerCarTools } from "./cars";
 import { MCP_INSTRUCTIONS } from "./guidance";
 
 type Content = { type: "text"; text: string } | { type: "image"; data: string; mimeType: string };
@@ -107,6 +108,8 @@ export function buildServer(userId: string) {
     if (rest > 0 && !pages?.length) content.push({ type: "text", text: `${rest} more page(s): call again with pages ${want.at(-1)! + 1}…${files.length}.` });
     return { content };
   });
+
+  registerCarTools(server, userId);
 
   for (const t of TOOLS) {
     const input = NEEDS_VISIT.has(t.name)

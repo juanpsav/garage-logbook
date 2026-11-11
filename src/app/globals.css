@@ -218,3 +218,14 @@ a{color:var(--ink);text-underline-offset:2px}
 .line .orig{font-style:italic}
 .line .dec{grid-column:1 / -1;justify-self:start;font-size:.78rem;border:1px solid var(--line-strong);border-radius:5px;padding:2px 6px;background:var(--surface)}
 .wrap.narrow{max-width:480px}
+
+/* Read-only app: connect card, odometer line, small text links */
+.connect h2{font-size:.95rem;font-weight:600;text-transform:none;letter-spacing:0;color:var(--ink)}
+.mcp-url{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mcp-url code{font-size:.8125rem;background:var(--sunken);border:1px solid var(--line);border-radius:6px;padding:5px 8px;overflow-wrap:anywhere}
+.connect details summary{cursor:pointer;color:var(--muted)}
+.connect .steps{margin:8px 0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.connect .steps code{font-size:.78rem;background:var(--sunken);padding:1px 4px;border-radius:4px;overflow-wrap:anywhere}
+.odo .lbl{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
+.btn.link,button.link{border:0;background:none;padding:0;color:var(--ink);text-decoration:underline;font:inherit;cursor:pointer}
+.demo-note{padding:0 2px}

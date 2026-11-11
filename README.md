@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Garage Logbook
 
-## Getting Started
+Car maintenance with your own AI agent as the interface. You talk to Claude (or any MCP client); it reads your shop paperwork, sorts out what was done, found and quoted, tells you what's really needed and what looks like an upsell, and keeps track of what's due. This app is the storage and the harness: your data, your original documents, and the rules for keeping them right.
 
-First, run the development server:
+Live: https://garage-logbook.vercel.app (signed out, it shows a sample garage).
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## How it fits together
+
+```
+ Your agent (claude.ai, Claude apps, Claude Code, any MCP client)
+   chat, voice, photos, reasoning, scheduled check-ins
+        │  MCP over HTTPS, OAuth sign-in (Google)
+        ▼
+ Garage backend (this repo)
+   /api/mcp      tools: get_garage, whats_due, add_car, find_schedule, list_suggestions,
+                 track_suggestions, start_visit, upload_link, get_pages, add_items,
+                 update_visit, confirm_visit, create/update/complete_task, log_work,
+                 set_odometer, search_history, delete_visit, …
+   rules         due dates by time and km, manufacturer schedules, Quebec winter-tire dates
+   guidance      how to read shop paperwork and advise (sent to every agent on connect)
+   storage       Postgres (Neon) + private Vercel Blob; original files kept untouched
+        ▲
+ Web app: read only. What's due, the documents, history, and how to connect an agent
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Shop paperwork.** One visit often mixes an invoice, inspection notes handwritten under its lines, and a quote. The agent starts a visit and gives you a one-tap upload link, so the originals land in your storage; it then reads the pages (`get_pages` returns them as images) and records every line as done, found or quoted, in plain English next to the original wording. What you heard at the counter overrides the paperwork.
+- **What's due.** `whats_due` is plain code, no model: late and upcoming tasks, quotes waiting on a decision, your own notes, a stale odometer, unfinished visits, and seasonal deadlines. An agent that can run on a schedule calls it and only speaks up when there's something to say.
+- **Several cars.** Every record belongs to a car and every tool call names one; nothing on the server tracks a "current car", so a conversation can move between cars freely.
+- **Sign-in.** OAuth 2.1 for agents (client ID metadata documents, with dynamic registration as a fallback) on top of Google sign-in, via Better Auth's MCP plugin. Each agent is approved once on a consent screen. Upload links are signed, expire after an hour and only add pages to one visit.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Connect an agent
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Claude (web, desktop, phone): Settings → Connectors → Add custom connector → `https://garage-logbook.vercel.app/api/mcp`.
+- Claude Code: `claude mcp add --transport http garage https://garage-logbook.vercel.app/api/mcp`, then `/mcp` to sign in.
 
-## Learn More
+## Stack
 
-To learn more about Next.js, take a look at the following resources:
+Next.js 16 (App Router) on Vercel · TypeScript · Postgres on Neon · Vercel Blob · Better Auth (Google, OAuth provider, MCP) · MCP TypeScript server SDK · Claude Opus 5.5 with web search for manufacturer schedules.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Code map
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `src/server/mcp/` MCP server, car tools, guidance for agents
+- `src/server/agent/tools.ts` the visit, item, task and history tools with their validation
+- `src/server/due.ts` what needs attention
+- `src/server/garage.ts`, `src/server/tables.ts`, `db/schema.sql` storage
+- `src/app/up/[token]` upload links; `src/app/sign-in`, `src/app/consent` the agent sign-in flow
+- `src/components/GarageView.tsx` the read-only web app
+- `docs/agent-first.md` the design and why
 
-## Deploy on Vercel
+## Run locally
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Needs a Postgres `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, Google OAuth credentials, `BLOB_READ_WRITE_TOKEN` and `ANTHROPIC_API_KEY` (for schedule lookups) in `.env.local`. Then `npm run db:migrate` and `npm run dev`.

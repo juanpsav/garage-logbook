@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { Garage } from "@/components/Root";
-import { authConfigured } from "@/server/auth";
+import { authConfigured, mcpResource } from "@/server/auth";
 import { getOwner } from "@/server/session";
 
 export default function Home() {
@@ -21,5 +21,5 @@ export default function Home() {
 
 async function SignedInGarage() {
   const owner = await getOwner();
-  return <Garage owner={owner} signInEnabled={authConfigured()} />;
+  return <Garage owner={owner} signInEnabled={authConfigured()} mcpUrl={mcpResource()} />;
 }

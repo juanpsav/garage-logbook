@@ -1,4 +1,4 @@
-import { del, get } from "@vercel/blob";
+import { get } from "@vercel/blob";
 import { getOwner, unauthorized } from "@/server/session";
 
 /** Private files are served through here so only the owner can open them. */
@@ -20,11 +20,4 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/files/[...path]
       "Cache-Control": "private, max-age=86400, immutable",
     },
   });
-}
-
-export async function DELETE(_req: Request, ctx: RouteContext<"/api/files/[...path]">) {
-  const pathname = await resolve(ctx);
-  if (!pathname) return unauthorized();
-  await del(pathname);
-  return new Response(null, { status: 204 });
 }
