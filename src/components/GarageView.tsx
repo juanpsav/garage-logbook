@@ -39,11 +39,12 @@ export function GarageView({ data, schedules, src, edit }: { data: Data; schedul
   if (!all.length) return edit ? <CarsView {...ctx} /> : <div className="empty">No cars yet.</div>;
   return (
     <>
-      {all.length > 1 && (
+      {(all.length > 1 || edit) && (
         <nav className="pills" aria-label="Car">
-          {[["all", all.length === 2 ? "Both cars" : "All cars"] as const, ...all.map((c) => [c.id, c.name] as const)].map(([id, n]) => (
+          {all.length > 1 && [["all", all.length === 2 ? "Both cars" : "All cars"] as const, ...all.map((c) => [c.id, c.name] as const)].map(([id, n]) => (
             <button key={id} className="pill" aria-pressed={car === id} onClick={() => { setCar(id); setOpen(null); setEditing(null); }}>{n}</button>
           ))}
+          {edit && <button className="pill add" onClick={() => { setView("cars"); setOpen(null); setEditing("car:new"); }}>+ Add car</button>}
         </nav>
       )}
       <section className="heroes">{cars.map((c) => <Hero key={c.id} {...ctx} theCar={c} />)}</section>

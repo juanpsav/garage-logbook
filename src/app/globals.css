@@ -206,4 +206,7 @@ select.dec{width:auto;padding:4px 10px;border-radius:999px;font-size:.78rem}
 .cta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px}
 .cta .mcp-url{align-self:auto}
 /* Two cars side by side: long status chips wrap instead of being cut off. */
-.hero .chip{white-space:normal}
+.hero .chips .chip{white-space:normal}
+.pill.add{border-style:dashed;color:var(--ink)}
+/* All five sections fit on a phone without sideways scrolling. */
+@media (max-width:520px){.seg button{flex:1 1 auto;padding:7px 6px;font-size:.75rem}}
