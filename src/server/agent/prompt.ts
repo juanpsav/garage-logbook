@@ -55,7 +55,7 @@ export async function garageSnapshot(userId: string, thread: Thread | null, toda
     today,
     cars: d.cars.map((c) => ({ id: c.id, name: c.name, km: c.km, kmDate: c.kmDate })),
     tasks: d.tasks.map((t) => ({
-      id: t.id, carId: t.carId, title: t.title,
+      id: t.id, carId: t.carId, car: carById.get(t.carId)?.name, title: t.title,
       due: status(t, carById.get(t.carId)).chips.map(([, x]) => x).join(", ") || "no due date",
       ...(repeats(t) && { repeats: every(t) }), ...(t.notes && { notes: t.notes }),
     })),
@@ -64,14 +64,14 @@ export async function garageSnapshot(userId: string, thread: Thread | null, toda
       .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
       .slice(0, 15)
       .map((v) => ({
-        date: v.date, carId: v.carId, title: v.title, km: v.km, total: v.total, shop: v.shop,
+        id: v.id, date: v.date, carId: v.carId, car: carById.get(v.carId ?? "")?.name, title: v.title, km: v.km, total: v.total, shop: v.shop,
         done: d.items.filter((i) => i.visitId === v.id && i.kind === "done").map((i) => i.text),
       })),
     openItems: d.items
       .filter((i) => i.kind !== "done" && (i.decision === "pending" || i.decision === "deferred" || i.decision == null) && !(thread && "visitId" in thread && i.visitId === thread.visitId))
       .slice(-25)
       .map((i) => ({
-        id: i.id, carId: i.carId, kind: i.kind, from: i.source === "you" ? "owner" : visitById.get(i.visitId ?? "")?.title ?? "shop",
+        id: i.id, carId: i.carId, car: carById.get(i.carId ?? "")?.name, kind: i.kind, from: i.source === "you" ? "owner" : visitById.get(i.visitId ?? "")?.title ?? "shop",
         date: (i.visitId && visitById.get(i.visitId)?.date) || i.created.slice(0, 10), text: i.text,
         ...(i.cost != null && { cost: i.cost }), ...(i.note && { note: i.note }), ...(i.decision && { decision: i.decision }),
       })),

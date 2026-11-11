@@ -26,7 +26,7 @@ export async function whatsDue(userId: string, today: string) {
   for (const t of tasks) {
     const c = cars.find((x) => x.id === t.carId);
     const s = status(t, c);
-    const n = { kind: "task", car: carName.get(t.carId), title: t.title, detail: s.chips.map(([, x]) => x).join(", "), ids: { taskId: t.id } };
+    const n = { kind: "task", car: carName.get(t.carId), title: t.title, detail: s.chips.map(([, x]) => x).join(", "), ids: { taskId: t.id, carId: t.carId } };
     if (s.rank === 0) attention.push(n);
     else if (s.rank === 1) upcoming.push(n);
   }
@@ -38,11 +38,11 @@ export async function whatsDue(userId: string, today: string) {
       (i.decision === "pending" ? attention : upcoming).push({
         kind: "quote", car: carName.get(i.carId ?? ""), title: i.text,
         detail: [i.cost != null && `$${i.cost.toFixed(2)}`, v?.shop, age != null && `quoted ${age} days ago`, i.decision === "deferred" && "you said later"].filter(Boolean).join(", "),
-        ids: { itemId: i.id, ...(v && { visitId: v.id }) },
+        ids: { itemId: i.id, ...(i.carId && { carId: i.carId }), ...(v && { visitId: v.id }) },
       });
     }
     if (i.source === "you" && !i.visitId && i.kind === "found") {
-      upcoming.push({ kind: "note", car: carName.get(i.carId ?? ""), title: i.text, detail: `noted ${i.created.slice(0, 10)}`, ids: { itemId: i.id } });
+      upcoming.push({ kind: "note", car: carName.get(i.carId ?? ""), title: i.text, detail: `noted ${i.created.slice(0, 10)}`, ids: { itemId: i.id, ...(i.carId && { carId: i.carId }) } });
     }
   }
 
@@ -53,7 +53,7 @@ export async function whatsDue(userId: string, today: string) {
 
   for (const v of visits) {
     if (v.status !== "confirmed" && daysBetween(v.created.slice(0, 10), today) >= 2) {
-      upcoming.push({ kind: "visit", car: carName.get(v.carId ?? ""), title: v.title || "A shop visit", detail: v.status === "draft" ? "pages added but not gone through" : "not saved to history yet", ids: { visitId: v.id } });
+      upcoming.push({ kind: "visit", car: carName.get(v.carId ?? ""), title: v.title || "A shop visit", detail: v.status === "draft" ? "pages added but not gone through" : "not saved to history yet", ids: { visitId: v.id, ...(v.carId && { carId: v.carId }) } });
     }
   }
 

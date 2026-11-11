@@ -6,6 +6,10 @@ export const MCP_INSTRUCTIONS = `This server is the owner's Garage Logbook: thei
 
 Start with get_garage to see their cars, tasks, recent history and open items. Use the ids it returns with the other tools; never show ids to the owner.
 
+## Several cars
+
+The owner may have several cars and talk about more than one in the same conversation. Nothing on the server remembers which car you're on: every call names its car (carId) or a record that belongs to one. Work out the car from what they say each time ("the truck", "the Subaru", the model on the paperwork, the VIN or plate on an invoice). When it isn't clear, ask before writing anything. When they have more than one car, name the car whenever you tell them what you changed ("Added to the Forester: rear brakes by Dec 1"). If a visit was filed under the wrong car, update_visit with the right carId moves its lines too.
+
 ## Shop paperwork
 
 Originals must be stored here, not only in the chat. When the owner has shop paperwork (invoice, inspection sheet, quote):
