@@ -1,7 +1,7 @@
 import "server-only";
 import type Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
-import { uid } from "@/lib/dates";
+import { addDays, uid } from "@/lib/dates";
 import { nextAfterDone } from "@/lib/logic";
 import type { Car, Item, Task, Visit } from "@/lib/types";
 import { sql } from "../db";
@@ -9,7 +9,7 @@ import { deleteRecord, getRecord, listRecords, putRecord, type Thread } from "..
 
 export type ToolCtx = { userId: string; thread: Thread; today: string; changed: boolean };
 
-const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe("YYYY-MM-DD");
+const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe("YYYY-MM-DD. Quebec paperwork often writes the year first: '26 Nov 10' or '26/11/10' is 2026-11-10.");
 const km = z.number().int().min(0).max(3_000_000);
 const money = z.number().min(-100_000).max(100_000);
 const kind = z.enum(["done", "found", "quoted"]);
@@ -62,6 +62,21 @@ async function raiseOdometer(ctx: ToolCtx, c: Car, k: number | null | undefined,
 }
 const now = () => new Date().toISOString();
 
+/**
+ * A date work was done can't be after today or before the car was built. Quebec paperwork often puts the
+ * year first ("26 Nov 10", "26/11/10" = 2026-11-10), which models tend to read as day-first and log
+ * years in the past; refusing those makes the agent read the date again.
+ */
+function checkWorkDate(ctx: ToolCtx, d: string | null | undefined, car?: Car | null) {
+  if (!d) return;
+  const built = Number(car?.name.match(/\b(19[5-9]\d|20\d\d)\b/)?.[1] ?? 0);
+  const year = Number(d.slice(0, 4));
+  const hint = " Quebec paperwork often writes the year first: \"26 Nov 10\" or \"26/11/10\" is 2026-11-10 (yy-mm-dd), not November 26, 2010. Read the date again; if it's still unclear, ask the owner.";
+  if (d > addDays(ctx.today, 1)) throw new ToolError(`${d} is in the future.${hint}`);
+  if (built && year < built - 1) throw new ToolError(`${d} is before this car was built (${built}).${hint}`);
+  if (year < 1990) throw new ToolError(`${d} looks wrong.${hint}`);
+}
+
 /* ---------- tools ---------- */
 
 export const TOOLS = [
@@ -75,7 +90,9 @@ export const TOOLS = [
     }),
     async run(ctx, i) {
       const v = await thisVisit(ctx);
-      if (i.carId) await needCar(ctx, i.carId);
+      const car = await getRecord(ctx.userId, "cars", i.carId || v.carId || "");
+      if (i.carId && !car) throw new ToolError(`No car with id ${i.carId}.`);
+      checkWorkDate(ctx, i.date, car);
       const n: Visit = { ...v };
       for (const k of ["carId", "title", "date", "km", "shop", "total", "summary"] as const) if (i[k] !== undefined && i[k] !== null) (n as Record<string, unknown>)[k] = i[k];
       if (n.status === "draft") n.status = "open";
@@ -183,7 +200,9 @@ export const TOOLS = [
     input: z.object({ id: z.string(), date, km: km.nullish() }),
     async run(ctx, i) {
       const t = await needTask(ctx, i.id);
-      const n = nextAfterDone(t, i.date, i.km ?? null, (await getRecord(ctx.userId, "cars", t.carId)) ?? undefined);
+      const car = await getRecord(ctx.userId, "cars", t.carId);
+      checkWorkDate(ctx, i.date, car);
+      const n = nextAfterDone(t, i.date, i.km ?? null, car ?? undefined);
       if (n) await put(ctx.userId, "tasks", n);
       else await deleteRecord(ctx.userId, "tasks", t.id);
       return n ? { next: { dueDate: n.dueDate, dueKm: n.dueKm } } : { removed: true };
@@ -198,6 +217,7 @@ export const TOOLS = [
     }),
     async run(ctx, i) {
       const c = await needCar(ctx, i.carId);
+      checkWorkDate(ctx, i.date, c);
       const v: Visit = { id: uid(), carId: c.id, title: i.title, date: i.date, km: i.km ?? null, shop: i.shop ?? null, total: i.cost ?? null, summary: null, status: "confirmed", created: now() };
       await put(ctx.userId, "visits", v);
       await put(ctx.userId, "items", {

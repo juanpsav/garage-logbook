@@ -69,6 +69,7 @@ button.link:hover,.meta a:hover{text-decoration-color:currentColor}
 .form-acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 .connect{gap:10px}
 .connect p{color:var(--muted)}
+.connect .how .steps{margin-bottom:4px}
 .mcp-url{display:flex;align-items:center;gap:6px;background:var(--sunken);border:1px solid var(--line);border-radius:999px;padding:4px 4px 4px 14px;max-width:100%;align-self:flex-start}
 .mcp-url code{font-size:.8125rem;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
 .connect details summary{cursor:pointer;color:var(--muted);font-size:.8125rem;width:max-content}
@@ -159,3 +160,46 @@ button.link:hover,.meta a:hover{text-decoration-color:currentColor}
 .line .c{white-space:nowrap}
 .line .sub{grid-column:1 / -1;font-size:.78rem;color:var(--muted);overflow-wrap:anywhere}
 .line .orig{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.72rem}
+
+/* quick edits */
+.hero-acts{display:flex;align-items:center;gap:6px}
+.row-acts{display:flex;gap:4px;margin-top:6px;flex-wrap:wrap}
+.row.editing,.line.editing{background:var(--sunken)}
+.line.editable{cursor:pointer}
+.line.editable:hover{background:var(--sunken)}
+.qform{display:flex;flex-direction:column;gap:10px;width:100%}
+.qfields{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.qfield{display:flex;flex-direction:column;gap:3px;min-width:0}
+.qfield.wide{grid-column:1 / -1}
+.qfield>span{font-size:.72rem;font-weight:500;color:var(--muted)}
+.qfield input,.qfield select,.qfield textarea,select.dec{border:1px solid var(--line-strong);border-radius:var(--r-sm);padding:7px 10px;background:var(--surface);color:var(--ink);font:inherit;font-size:.8125rem;width:100%;min-width:0}
+select.dec{width:auto;padding:4px 10px;border-radius:999px;font-size:.78rem}
+.qfield textarea{resize:vertical}
+.qfield input:focus,.qfield select:focus,.qfield textarea:focus,select.dec:focus{outline:none;border-color:var(--focus);box-shadow:0 0 0 3px color-mix(in srgb,var(--focus) 20%,transparent)}
+@media (pointer:coarse){.qfield input,.qfield select,.qfield textarea,select.dec{font-size:16px}}
+.qfield input[type=date]{-webkit-appearance:none;appearance:none;min-height:2.4em}
+.qacts{display:flex;align-items:center;gap:6px}
+.qacts .grow{flex:1}
+.btn.danger{color:var(--late);border-color:var(--late-line);background:var(--late-soft)}
+.alert{font-size:.8125rem;padding:10px 14px;border-radius:var(--r-sm);background:var(--late-soft);color:var(--late);border:1px solid var(--late-line)}
+
+/* signed-out page */
+.intro{display:flex;flex-direction:column;gap:12px;padding:20px 0 4px}
+.eyebrow{font-size:.75rem;font-weight:500;color:var(--muted);letter-spacing:.02em}
+.display{font-size:clamp(1.6rem,4.5vw,2.2rem);font-weight:600;letter-spacing:-.035em;line-height:1.1;max-width:18ch}
+.intro p{margin:0;color:var(--muted);max-width:56ch;font-size:.95rem}
+.how summary{cursor:pointer;color:var(--muted);font-size:.8125rem;width:max-content}
+.how[open] summary{margin-bottom:8px}
+.how .steps{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:.8125rem}
+.how .steps strong{color:var(--ink);font-weight:500}
+.how .steps code{font-size:.75rem;background:var(--sunken);border:1px solid var(--line);padding:1px 5px;border-radius:6px;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.tools{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:18px}
+.tools h3,.sample-h h3{font-size:.8125rem;font-weight:600}
+.tool-row{display:grid;grid-template-columns:6.5em 1fr;gap:10px;align-items:baseline}
+.tool-group{font-size:.78rem;color:var(--muted)}
+.tool-names{display:flex;flex-wrap:wrap;gap:6px}
+.tool-names code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.75rem;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:2px 9px}
+@media (max-width:480px){.tool-row{grid-template-columns:1fr;gap:4px}}
+.sample{display:flex;flex-direction:column;gap:14px;border-top:1px solid var(--line);padding-top:18px}
+.sample-h{display:flex;align-items:center;gap:8px}
+.push-r{margin-left:auto}
