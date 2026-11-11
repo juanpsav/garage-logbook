@@ -3,7 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import seedSchedules from "@/data/schedules.json";
 import { fmtDate, fmtKm, now, today, uid } from "@/lib/dates";
-import { acceptable, isPdf, MAX_FILES, pdfToImages, shrink } from "@/lib/files";
+import { acceptable, MAX_FILES } from "@/lib/files";
+import { preparePages } from "@/lib/pages";
 import { findSuggestion, matchSchedule, nextAfterDone, scheduleFor, taskFromSuggestion, type LastDone } from "@/lib/logic";
 import { turnstileToken } from "@/lib/turnstile";
 import { emptyData, StoreError, type Store } from "@/lib/store";
@@ -207,27 +208,10 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
   /** Saves photos and PDFs as pages of a visit. Null (after a toast) on failure. */
   const storePages = async (files: File[], visitId: string, start: number): Promise<FileRec[] | null> => {
     setBusy(files.length > 1 ? `Saving ${files.length} pages…` : "Saving…");
-    const out: FileRec[] = [];
+    let out: FileRec[] = [];
     try {
-      for (const [i, f] of files.entries()) {
-        const base = { id: uid(), visitId, itemId: null, position: start + i, name: f.name || null, created: now() };
-        if (isPdf(f)) {
-          const orig = await store.putFile(f, "application/pdf");
-          let view: string | null = null;
-          try {
-            const [first] = await pdfToImages(f, 1);
-            if (first) view = await store.putFile(await shrink(first, 600), "image/jpeg");
-          } catch { /* kept, just without a preview */ }
-          out.push({ ...base, type: "application/pdf", orig, view });
-        } else {
-          let b: Blob;
-          try { b = await shrink(f, 2000); } catch { throw new StoreError("decode", "decode"); }
-          const view = await store.putFile(b, "image/jpeg");
-          // The photo exactly as taken is kept too, when there's room for it (signed in).
-          const orig = store.kind === "server" ? await store.putFile(f, f.type || "image/jpeg") : view;
-          out.push({ ...base, type: f.type || "image/jpeg", orig, view });
-        }
-      }
+      // Signed in, photos are also kept exactly as taken; browser storage is too small for both.
+      out = await preparePages(files, (b, t) => store.putFile(b, t), visitId, start, store.kind === "server");
     } catch (e) {
       const code = e instanceof StoreError ? e.code : "";
       toast(code === "decode" ? "Couldn't open that image. Try a JPEG or PNG, or take the photo again."
@@ -274,7 +258,9 @@ function useGarageState(store: Store, owner: { id: string; email: string } | nul
   };
 
   const deletePage = async (f: FileRec) => {
-    await deleteFiles([f]);
+    // Pages of one PDF share its original; keep it while another page still uses it.
+    const shared = dataRef.current.files.some((x) => x.id !== f.id && x.orig === f.orig);
+    await deleteFiles([shared ? { ...f, orig: "" } : f]);
     await del("files", f.id);
   };
 

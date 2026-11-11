@@ -42,7 +42,9 @@ async function expand(stored: StoredMessage[], files: Map<string, FileRec>): Pro
       const f = files.get(b.fileId);
       if (!f) { out.push({ type: "text", text: `[Page ${b.n} was deleted.]` }); continue; }
       out.push({ type: "text", text: `Page ${b.n}:` });
-      if (f.type === "application/pdf") {
+      // New PDFs are stored as one page image per record (sharing the PDF); older ones are one record with only a thumbnail, so they go in whole.
+      const perPage = [...files.values()].some((x) => x.id !== f.id && x.orig === f.orig);
+      if (f.type === "application/pdf" && (!f.view || !perPage)) {
         out.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: await load(f.orig) } });
       } else {
         out.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: await load(f.view ?? f.orig) } });

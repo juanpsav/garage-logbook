@@ -217,3 +217,4 @@ a{color:var(--ink);text-underline-offset:2px}
 .line .sub{grid-column:1 / -1;font-size:.78rem;color:var(--muted);overflow-wrap:anywhere}
 .line .orig{font-style:italic}
 .line .dec{grid-column:1 / -1;justify-self:start;font-size:.78rem;border:1px solid var(--line-strong);border-radius:5px;padding:2px 6px;background:var(--surface)}
+.wrap.narrow{max-width:480px}

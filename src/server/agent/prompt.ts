@@ -42,7 +42,12 @@ Write amounts like $123.45 and distances like 141 289 km. Keep replies short. Th
 export const todayLocal = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto" }).format(new Date());
 
 /** The <garage> block that starts each user message. */
-export async function garageContext(userId: string, thread: Thread, today: string) {
+export async function garageContext(userId: string, thread: Thread | null, today: string) {
+  return `<garage>\n${JSON.stringify(await garageSnapshot(userId, thread, today))}\n</garage>`;
+}
+
+/** Cars, tasks with due status, recent history and open items; with the visit or car a conversation is about. */
+export async function garageSnapshot(userId: string, thread: Thread | null, today: string) {
   const d = await snapshotData(userId);
   const carById = new Map(d.cars.map((c) => [c.id, c]));
   const visitById = new Map(d.visits.map((v) => [v.id, v]));
@@ -63,7 +68,7 @@ export async function garageContext(userId: string, thread: Thread, today: strin
         done: d.items.filter((i) => i.visitId === v.id && i.kind === "done").map((i) => i.text),
       })),
     openItems: d.items
-      .filter((i) => i.kind !== "done" && (i.decision === "pending" || i.decision === "deferred" || i.decision == null) && !("visitId" in thread && i.visitId === thread.visitId))
+      .filter((i) => i.kind !== "done" && (i.decision === "pending" || i.decision === "deferred" || i.decision == null) && !(thread && "visitId" in thread && i.visitId === thread.visitId))
       .slice(-25)
       .map((i) => ({
         id: i.id, carId: i.carId, kind: i.kind, from: i.source === "you" ? "owner" : visitById.get(i.visitId ?? "")?.title ?? "shop",
@@ -71,7 +76,7 @@ export async function garageContext(userId: string, thread: Thread, today: strin
         ...(i.cost != null && { cost: i.cost }), ...(i.note && { note: i.note }), ...(i.decision && { decision: i.decision }),
       })),
   };
-  if ("visitId" in thread) {
+  if (thread && "visitId" in thread) {
     const v = visitById.get(thread.visitId);
     if (v) snap.thisVisit = {
       ...v,
@@ -79,8 +84,8 @@ export async function garageContext(userId: string, thread: Thread, today: strin
         id: i.id, kind: i.kind, text: i.text, original: i.original, cost: i.cost, page: i.page, unsure: i.unsure, note: i.note, decision: i.decision,
       })),
     };
-  } else {
+  } else if (thread) {
     snap.thisCar = thread.carId;
   }
-  return `<garage>\n${JSON.stringify(snap)}\n</garage>`;
+  return snap;
 }

@@ -32,7 +32,7 @@ const def = <S extends z.ZodType>(d: Def<S>) => d;
 
 /* ---------- helpers ---------- */
 
-class ToolError extends Error {}
+export class ToolError extends Error {}
 
 async function needCar(ctx: ToolCtx, id: string) {
   const c = await getRecord(ctx.userId, "cars", id);
@@ -64,7 +64,7 @@ const now = () => new Date().toISOString();
 
 /* ---------- tools ---------- */
 
-const TOOLS = [
+export const TOOLS = [
   def({
     name: "update_visit",
     description: "Set details of the visit this conversation is about. Only pass the fields to change.",
