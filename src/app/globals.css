@@ -184,7 +184,7 @@ select.dec{width:auto;padding:4px 10px;border-radius:999px;font-size:.78rem}
 .alert{font-size:.8125rem;padding:10px 14px;border-radius:var(--r-sm);background:var(--late-soft);color:var(--late);border:1px solid var(--late-line)}
 
 /* signed-out page */
-.intro{display:flex;flex-direction:column;gap:12px;padding:20px 0 4px}
+.intro{display:flex;flex-direction:column;gap:12px;padding:8px 0 4px}
 .eyebrow{font-size:.75rem;font-weight:500;color:var(--muted);letter-spacing:.02em}
 .display{font-size:clamp(1.6rem,4.5vw,2.2rem);font-weight:600;letter-spacing:-.035em;line-height:1.1;max-width:16ch}
 .intro p{margin:0;color:var(--muted);max-width:64ch;font-size:.95rem;text-wrap:pretty}
@@ -193,15 +193,6 @@ select.dec{width:auto;padding:4px 10px;border-radius:999px;font-size:.78rem}
 .how .steps{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:.8125rem}
 .how .steps strong{color:var(--ink);font-weight:500}
 .how .steps code{font-size:.75rem;background:var(--sunken);border:1px solid var(--line);padding:1px 5px;border-radius:6px;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-.tools{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:18px}
-.tools h3,.sample h3{font-size:.8125rem;font-weight:600}
-.tool-row{display:grid;grid-template-columns:6.5em 1fr;gap:10px;align-items:baseline}
-.tool-group{font-size:.78rem;color:var(--muted)}
-.tool-names{display:flex;flex-wrap:wrap;gap:6px}
-.tool-names code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.75rem;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:2px 9px}
-@media (max-width:480px){.tool-row{grid-template-columns:1fr;gap:4px}}
-.sample{display:flex;flex-direction:column;gap:14px;border-top:1px solid var(--line);padding-top:18px}
-.sample-h{display:flex;align-items:center;gap:8px}
 .push-r{margin-left:auto}
 .diagram{margin:0}
 /* Wider than the text column on large screens so the labels stay readable. */
@@ -210,3 +201,7 @@ select.dec{width:auto;padding:4px 10px;border-radius:999px;font-size:.78rem}
 .foot{border-top:1px solid var(--line);padding-top:16px;font-size:.8125rem;color:var(--muted)}
 .foot a{color:var(--muted);text-underline-offset:3px}
 .foot a:hover{color:var(--ink)}
+.seg-inline{align-self:flex-start}
+.seg-inline button{flex:0 0 auto}
+.cta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px}
+.cta .mcp-url{align-self:auto}

@@ -22,14 +22,14 @@ export function Garage({ owner, signInEnabled, mcpUrl }: { owner: OwnerInfo; sig
   const signIn = signInEnabled ? () => authClient.signIn.social({ provider: "google", callbackURL: "/" }) : null;
   const account = owner ? (
     <button className="btn ghost sm" disabled={leaving} onClick={async () => { setLeaving(true); await authClient.signOut(); location.reload(); }}>Sign out</button>
-  ) : signIn ? <button className="btn ghost sm" onClick={signIn}>Sign in</button> : null;
+  ) : null;
   return (
     <div className="wrap">
       <header className="top">
         <h1 className="brand"><Mark />Garage Logbook</h1>
         <div className="top-acts">{account}</div>
       </header>
-      {owner ? <><ConnectCard mcpUrl={mcpUrl} /><OwnerGarage /></> : <Landing mcpUrl={mcpUrl} />}
+      {owner ? <><ConnectCard mcpUrl={mcpUrl} /><OwnerGarage /></> : <Landing mcpUrl={mcpUrl} signIn={signIn} />}
     </div>
   );
 }
@@ -87,35 +87,35 @@ function OwnerGarage() {
   );
 }
 
-// The MCP server's tools (src/server/mcp).
-const TOOLS = [
-  "get_garage", "whats_due", "add_car", "find_schedule", "track_suggestions", "start_visit", "upload_link", "get_pages",
-  "add_items", "confirm_visit", "create_task", "complete_task", "log_work", "set_odometer", "search_history",
-];
-
-/** Signed out: what this is, its address, its tools, and a sample of what it keeps. */
-function Landing({ mcpUrl }: { mcpUrl: string }) {
+/** Signed out: two tabs. About says what this is and how to start; Sample shows what it keeps. */
+function Landing({ mcpUrl, signIn }: { mcpUrl: string; signIn: (() => void) | null }) {
+  const [tab, setTab] = useState<"about" | "sample">("about");
   const [data] = useState(() => demoData(today()));
   return (
     <>
-      <section className="intro">
-        <h2 className="display">MCP server for car maintenance.</h2>
-        <p>Your agent reads shop paperwork, tracks service and keeps the records here.</p>
-        <McpUrl mcpUrl={mcpUrl} />
-        <ConnectSteps mcpUrl={mcpUrl} />
-      </section>
-      <figure className="diagram">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/architecture.svg" width={1144} height={444} alt="Claude, Meta Muse, Dot or any MCP client connect over MCP to the Garage Logbook server, which stores records in Postgres and original pages in Blob storage, and serves this web app." />
-      </figure>
-      <section className="tools">
-        <h3>Tools</h3>
-        <span className="tool-names">{TOOLS.map((n) => <code key={n}>{n}</code>)}</span>
-      </section>
-      <section className="sample">
-        <h3>Sample garage</h3>
+      <nav className="seg seg-inline" aria-label="Section">
+        <button aria-pressed={tab === "about"} onClick={() => setTab("about")}>About</button>
+        <button aria-pressed={tab === "sample"} onClick={() => setTab("sample")}>Sample garage</button>
+      </nav>
+      {tab === "about" ? (
+        <>
+          <section className="intro">
+            <h2 className="display">MCP server for car maintenance.</h2>
+            <p>Your agent reads shop paperwork, tracks service and keeps the records here.</p>
+            <div className="cta">
+              {signIn && <button className="btn primary" onClick={signIn}>Sign in</button>}
+              <McpUrl mcpUrl={mcpUrl} />
+            </div>
+            <ConnectSteps mcpUrl={mcpUrl} />
+          </section>
+          <figure className="diagram">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/architecture.svg" width={1144} height={444} alt="Claude, Meta Muse, Dot or any MCP client connect over MCP to the Garage Logbook server, which stores records in Postgres and original pages in Blob storage, and serves this web app." />
+          </figure>
+        </>
+      ) : (
         <GarageView data={data} schedules={seedSchedules as Schedule[]} src={demoFile} />
-      </section>
+      )}
       <footer className="foot">
         <a href="https://github.com/juanpsav/garage-logbook" target="_blank" rel="noopener">GitHub</a>
       </footer>
