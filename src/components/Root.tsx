@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { today } from "@/lib/dates";
 import { demoData } from "@/lib/demo";
-import type { Data } from "@/lib/types";
+import seedSchedules from "@/data/schedules.json";
+import type { Data, Schedule } from "@/lib/types";
 import { ConnectCard } from "./ConnectCard";
 import { GarageView } from "./GarageView";
+import { Mark } from "./Mark";
 
 export type OwnerInfo = { id: string; email: string } | null;
 
@@ -22,7 +24,10 @@ export function Garage({ owner, signInEnabled, mcpUrl }: { owner: OwnerInfo; sig
   ) : signIn ? <button className="btn ghost sm" onClick={signIn}>Sign in</button> : null;
   return (
     <div className="wrap">
-      <header className="top"><h1>Garage Logbook</h1><div className="top-acts">{account}</div></header>
+      <header className="top">
+        <h1 className="brand"><Mark />Garage Logbook</h1>
+        <div className="top-acts">{account}</div>
+      </header>
       <ConnectCard mcpUrl={mcpUrl} signedIn={!!owner} />
       {owner ? <OwnerGarage /> : <Demo />}
     </div>
@@ -30,26 +35,27 @@ export function Garage({ owner, signInEnabled, mcpUrl }: { owner: OwnerInfo; sig
 }
 
 function OwnerGarage() {
-  const [data, setData] = useState<Data | null>(null);
+  const [data, setData] = useState<(Data & { schedules: Schedule[] }) | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     let live = true;
     fetch("/api/data", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-      .then((d: Data) => live && setData(d), () => live && setFailed(true));
+      .then((d: Data & { schedules?: Schedule[] }) => live && setData({ ...d, schedules: d.schedules ?? [] }), () => live && setFailed(true));
     return () => { live = false; };
   }, []);
   if (failed) return <p className="muted">Couldn&apos;t load your garage. Reload the page.</p>;
   if (!data) return <p className="muted">Loading your garage…</p>;
-  return <GarageView data={data} src={serverFile} />;
+  return <GarageView data={data} schedules={data.schedules} src={serverFile} />;
 }
 
 function Demo() {
   const [data] = useState(() => demoData(today()));
   return (
     <>
-      <div className="demo-note small muted">Below is a <strong>sample garage</strong>, the way an owner sees theirs. Sign in to see your own.</div>
-      <GarageView data={data} src={demoFile} />
+      <div className="demo-note"><span className="chip">Sample garage</span> This is how an owner sees theirs. Sign in to see your own.</div>
+      <GarageView data={data} schedules={seedSchedules as Schedule[]} src={demoFile} />
     </>
   );
 }
+

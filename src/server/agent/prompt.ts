@@ -1,5 +1,6 @@
 import "server-only";
-import { every, repeats, status } from "@/lib/logic";
+import { every, intervalLabel, repeats, scheduleFor, status } from "@/lib/logic";
+import { listSchedules } from "../schedules";
 import type { Thread } from "../garage";
 import { snapshotData } from "./tools";
 
@@ -8,12 +9,20 @@ export const todayLocal = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Am
 
 /** Cars, tasks with due status, recent history and open items; with the visit or car a conversation is about. */
 export async function garageSnapshot(userId: string, thread: Thread | null, today: string) {
-  const d = await snapshotData(userId);
+  const [d, schedules] = await Promise.all([snapshotData(userId), listSchedules()]);
   const carById = new Map(d.cars.map((c) => [c.id, c]));
   const visitById = new Map(d.visits.map((v) => [v.id, v]));
   const snap: Record<string, unknown> = {
     today,
-    cars: d.cars.map((c) => ({ id: c.id, name: c.name, km: c.km, kmDate: c.kmDate })),
+    cars: d.cars.map((c) => {
+      // The manufacturer schedule, and which of its items aren't tracked as tasks yet (offer to track them).
+      const sc = scheduleFor(c, schedules);
+      const tracked = new Set(d.tasks.filter((t) => t.carId === c.id).map((t) => t.sugKey));
+      return {
+        id: c.id, name: c.name, km: c.km, kmDate: c.kmDate,
+        schedule: sc ? { name: sc.name, notTracked: sc.items.filter((i) => !tracked.has(i.key)).map((i) => `${i.title} (${intervalLabel(i).toLowerCase()})`) } : null,
+      };
+    }),
     tasks: d.tasks.map((t) => ({
       id: t.id, carId: t.carId, car: carById.get(t.carId)?.name, title: t.title,
       due: status(t, carById.get(t.carId)).chips.map(([, x]) => x).join(", ") || "no due date",

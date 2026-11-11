@@ -1,3 +1,4 @@
+import { Mark } from "@/components/Mark";
 import { verifyOAuthQueryParams } from "@better-auth/oauth-provider";
 import { headers } from "next/headers";
 import { Suspense } from "react";
@@ -9,7 +10,7 @@ export const metadata = { title: "Connect · Garage Logbook" };
 export default function ConsentPage({ searchParams }: PageProps<"/consent">) {
   return (
     <div className="wrap narrow">
-      <header className="top"><h1>Garage Logbook</h1></header>
+      <header className="top"><h1 className="brand"><Mark />Garage Logbook</h1></header>
       <Suspense fallback={<p className="muted">Loading…</p>}><Consent searchParams={searchParams} /></Suspense>
     </div>
   );

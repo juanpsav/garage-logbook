@@ -1,3 +1,4 @@
+import { Mark } from "@/components/Mark";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { getRecord, listRecords } from "@/server/garage";
@@ -10,7 +11,7 @@ export const metadata = { title: "Add pages · Garage Logbook" };
 export default function UploadPage({ params }: PageProps<"/up/[token]">) {
   return (
     <div className="wrap narrow">
-      <header className="top"><h1>Garage Logbook</h1></header>
+      <header className="top"><h1 className="brand"><Mark />Garage Logbook</h1></header>
       <Suspense fallback={<p className="muted">Loading…</p>}><Upload params={params} /></Suspense>
     </div>
   );

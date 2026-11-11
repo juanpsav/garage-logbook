@@ -1,3 +1,4 @@
+import { Mark } from "@/components/Mark";
 import { SignInCard } from "./SignInCard";
 
 export const metadata = { title: "Sign in · Garage Logbook" };
@@ -6,7 +7,7 @@ export const metadata = { title: "Sign in · Garage Logbook" };
 export default function SignInPage() {
   return (
     <div className="wrap narrow">
-      <header className="top"><h1>Garage Logbook</h1></header>
+      <header className="top"><h1 className="brand"><Mark />Garage Logbook</h1></header>
       <SignInCard />
     </div>
   );

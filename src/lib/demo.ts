@@ -11,13 +11,15 @@ export function demoData(today: string): Data {
     decision: kind === "quoted" ? ("pending" as const) : null, created: t(-2), ...more,
   });
   return {
-    cars: [{ id: car, name: "2019 Subaru Forester", km: 139412, kmDate: d(-2), scheduleId: null, created: t(-200) }],
+    cars: [{ id: car, name: "2019 Subaru Forester", km: 139412, kmDate: d(-2), scheduleId: "subaru-forester-2019", created: t(-200) }],
+    // Tracked from the manufacturer schedule (sugKey), plus one task from a shop visit. Some schedule items are left untracked on purpose.
     tasks: [
-      { id: "demo-t1", carId: car, title: "Oil and filter change", notes: "Synthetic 0W-20.", created: t(-200), everyMonths: 6, everyKm: 8000, anchor: null, dueDate: d(-3), dueKm: 140000 },
+      { id: "demo-t1", carId: car, title: "Oil and filter change", sugKey: "m-oil", notes: "Synthetic 0W-20.", created: t(-200), everyMonths: 6, everyKm: 9600, anchor: null, dueDate: d(-1), dueKm: 141400 },
+      { id: "demo-t5", carId: car, title: "Rotate and inspect tires", sugKey: "m-rotate", notes: "", created: t(-200), everyMonths: 6, everyKm: 9600, anchor: null, dueDate: d(150), dueKm: 149000 },
       { id: "demo-t2", carId: car, title: "Rear brakes: pads, discs, caliper service", visitId: visit, created: t(-2), everyMonths: null, everyKm: null, anchor: null, dueDate: d(21), dueKm: null,
         notes: "Rear pads were 3 mm at the last visit, rear discs rusty. Quoted $612.40 plus tax. Check pad thickness through the wheel spokes; replace near 2 mm or if it grinds." },
-      { id: "demo-t3", carId: car, title: "Cabin air filter", created: t(-200), everyMonths: 12, everyKm: 24000, anchor: null, dueDate: d(95), dueKm: 150000 },
-      { id: "demo-t4", carId: car, title: "Brake fluid flush", created: t(-200), everyMonths: 30, everyKm: null, anchor: null, dueDate: d(180), dueKm: null },
+      { id: "demo-t3", carId: car, title: "Cabin air filter", sugKey: "m-cabin", notes: "", created: t(-200), everyMonths: 12, everyKm: 19200, anchor: null, dueDate: d(95), dueKm: 150000 },
+      { id: "demo-t4", carId: car, title: "Brake fluid replacement", sugKey: "m-brakefluid", notes: "", created: t(-200), everyMonths: 30, everyKm: 48000, anchor: null, dueDate: d(180), dueKm: 168000 },
     ],
     visits: [
       { id: visit, carId: car, title: "Winter tire changeover and inspection", date: d(-2), km: 139412, shop: "Garage Exemple Inc.", total: 107.43, status: "confirmed", created: t(-2),

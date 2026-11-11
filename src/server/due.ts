@@ -1,6 +1,7 @@
 import "server-only";
 import { daysBetween } from "@/lib/dates";
-import { status } from "@/lib/logic";
+import { scheduleFor, status } from "@/lib/logic";
+import { listSchedules } from "./schedules";
 import { listRecords } from "./garage";
 
 type Notice = { kind: string; car?: string; title: string; detail?: string; ids?: Record<string, string> };
@@ -16,8 +17,8 @@ const inWindow = (today: string, from: string, to: string) => {
  * winter-tire dates. An agent's scheduled check-in calls this and only speaks up when it's not empty.
  */
 export async function whatsDue(userId: string, today: string) {
-  const [cars, tasks, visits, items] = await Promise.all([
-    listRecords(userId, "cars"), listRecords(userId, "tasks"), listRecords(userId, "visits"), listRecords(userId, "items"),
+  const [cars, tasks, visits, items, schedules] = await Promise.all([
+    listRecords(userId, "cars"), listRecords(userId, "tasks"), listRecords(userId, "visits"), listRecords(userId, "items"), listSchedules(),
   ]);
   const carName = new Map(cars.map((c) => [c.id, c.name]));
   const visitById = new Map(visits.map((v) => [v.id, v]));
@@ -49,6 +50,15 @@ export async function whatsDue(userId: string, today: string) {
   for (const c of cars) {
     const age = c.kmDate ? daysBetween(c.kmDate, today) : null;
     if (age == null || age > 45) attention.push({ kind: "odometer", car: c.name, title: "Odometer reading is old", detail: age == null ? "never recorded" : `last updated ${age} days ago; km-based tasks may be off`, ids: { carId: c.id } });
+  }
+
+  // Manufacturer schedule items nobody is tracking yet: reminders can't fire for them.
+  for (const c of cars) {
+    const sc = scheduleFor(c, schedules);
+    if (!sc) { upcoming.push({ kind: "schedule", car: c.name, title: "No manufacturer schedule yet", detail: "find_schedule, then list_suggestions", ids: { carId: c.id } }); continue; }
+    const tracked = new Set(tasks.filter((t) => t.carId === c.id).map((t) => t.sugKey));
+    const missing = sc.items.filter((i) => !tracked.has(i.key));
+    if (missing.length) upcoming.push({ kind: "schedule", car: c.name, title: `${missing.length} of ${sc.items.length} manufacturer schedule items aren't tracked`, detail: missing.map((i) => i.title).join(", "), ids: { carId: c.id } });
   }
 
   for (const v of visits) {

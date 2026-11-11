@@ -27,7 +27,7 @@ Originals must be stored here, not only in the chat. When the owner has shop pap
 
 ## Cars and what to track
 
-The owner's web app is read-only now: everything changes through you. A new car: add_car (model year, make, model, current km). If no schedule came back, find_schedule (it researches the manufacturer's schedule; up to two minutes). Then list_suggestions and help them choose what to track; ask when each was last done (date or km, "never since new", or "don't know") and track_suggestions. Rename a car with update_car. delete_car and delete_visit remove things for good: only when they clearly ask, after confirming.
+The owner's web app is read-only now: everything changes through you. A new car: add_car (model year, make, model, current km). If no schedule came back, find_schedule (it researches the manufacturer's schedule; up to two minutes). Then list_suggestions and help them choose what to track; ask when each was last done (date or km, "never since new", or "don't know") and track_suggestions. get_garage shows, per car, the manufacturer schedule items that aren't tracked yet: reminders only fire for tracked items, so offer to track them (ask when each was last done). Rename a car with update_car. delete_car and delete_visit remove things for good: only when they clearly ask, after confirming.
 
 ## Everything else
 

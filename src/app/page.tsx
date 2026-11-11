@@ -1,3 +1,4 @@
+import { Mark } from "@/components/Mark";
 import { Suspense } from "react";
 import { Garage } from "@/components/Root";
 import { authConfigured, mcpResource } from "@/server/auth";
@@ -9,7 +10,7 @@ export default function Home() {
     <Suspense
       fallback={
         <div className="wrap">
-          <header className="top"><h1>Garage Logbook</h1></header>
+          <header className="top"><h1 className="brand"><Mark />Garage Logbook</h1></header>
           <p className="muted">Loading your garage…</p>
         </div>
       }
