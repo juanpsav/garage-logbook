@@ -8,8 +8,10 @@
   --soon:#a16207; --soon-soft:#fef9e7; --soon-line:#fbe5a8;
   --ok:#15803d; --ok-soft:#eefbf2; --ok-line:#bbf0cc;
   --note:#4f46e5;
+  --hi-bg:#18181b; --hi-ink:#fafafa; --hi-muted:#a1a1aa; --hi-line:#3f3f46;
   --shadow:0 1px 2px rgb(0 0 0 / .04),0 1px 1px rgb(0 0 0 / .02);
   --f-body:var(--font-body),ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:var(--font-mono),ui-monospace,SFMono-Regular,Menlo,monospace;
   --r:14px; --r-sm:10px;
   color-scheme:light;
 }
@@ -22,6 +24,7 @@
     --soon:#facc15; --soon-soft:#2a2410; --soon-line:#4a3f17;
     --ok:#4ade80; --ok-soft:#10241a; --ok-line:#1c4430;
     --note:#a5b4fc;
+    --hi-bg:#f4f4f5; --hi-ink:#0c0c0d; --hi-muted:#52525b; --hi-line:#d4d4d8;
     --shadow:none;
     color-scheme:dark;
   }
@@ -67,16 +70,22 @@ button.link:hover,.meta a:hover{text-decoration-color:currentColor}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow)}
 .card h2{font-size:1rem;font-weight:600;letter-spacing:-.01em}
 .form-acts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
-.connect{gap:10px}
-.connect p{color:var(--muted)}
-.connect .how .steps{margin-bottom:4px}
 .mcp-url{display:flex;align-items:center;gap:6px;background:var(--sunken);border:1px solid var(--line);border-radius:999px;padding:4px 4px 4px 14px;max-width:100%;align-self:flex-start}
-.mcp-url code{font-size:.8125rem;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
-.connect details summary{cursor:pointer;color:var(--muted);font-size:.8125rem;width:max-content}
-.connect details[open] summary{margin-bottom:8px}
-.connect .steps{margin:0 0 8px;padding-left:18px;display:flex;flex-direction:column;gap:6px;color:var(--muted)}
-.connect .steps strong{color:var(--ink);font-weight:500}
-.connect .steps code{font-size:.75rem;background:var(--sunken);border:1px solid var(--line);padding:1px 5px;border-radius:6px;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.mcp-url code{font-size:.8125rem;overflow-wrap:anywhere;font-family:var(--f-mono)}
+/* Signed in: the MCP server, inverted so it reads first. */
+.connect{background:var(--hi-bg);color:var(--hi-ink);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.connect .eyebrow{font-family:var(--f-mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--hi-muted);display:flex;align-items:center;gap:8px}
+.connect .eyebrow::before{content:"";width:7px;height:7px;border-radius:50%;background:#4ade80}
+.connect h2{font-size:1.25rem;font-weight:600;letter-spacing:-.02em}
+.connect .mcp-url{background:transparent;border:1px solid var(--hi-line);border-radius:8px;padding:6px 6px 6px 12px;align-self:stretch;justify-content:space-between}
+.connect .mcp-url{flex-wrap:nowrap}
+.connect .mcp-url code{font-family:var(--f-mono);font-size:.875rem;flex:1;min-width:0}
+@media (max-width:520px){.connect .mcp-url code{font-size:.75rem}}
+.connect .mcp-url .btn{background:var(--hi-ink);color:var(--hi-bg);border-color:var(--hi-ink);border-radius:6px}
+.connect .how summary{color:var(--hi-muted)}
+.connect .how .steps{color:var(--hi-muted);margin-bottom:2px}
+.connect .how .steps strong{color:var(--hi-ink)}
+.connect .how .steps code{background:transparent;border-color:var(--hi-line)}
 .demo-note{display:flex;align-items:center;gap:8px;font-size:.8125rem;color:var(--muted);flex-wrap:wrap}
 
 /* car pills and the segmented view switch */
@@ -95,13 +104,8 @@ button.link:hover,.meta a:hover{text-decoration-color:currentColor}
 .hero{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow);min-width:0}
 .hero-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .car-name{font-size:1.15rem;font-weight:600;letter-spacing:-.02em;min-width:0;overflow-wrap:anywhere}
-.hero-grid{display:grid;grid-template-columns:auto 1fr;gap:24px}
-.hero-grid>div{display:flex;flex-direction:column;gap:3px;min-width:0}
 .lbl{font-size:.72rem;font-weight:500;color:var(--muted)}
-.big{font-size:1.6rem;font-weight:600;letter-spacing:-.03em;line-height:1.15;white-space:nowrap}
-.what{font-weight:500;overflow-wrap:anywhere}
 .stale{color:var(--soon)}
-@media (max-width:420px){.hero-grid{grid-template-columns:1fr;gap:12px}}
 
 /* chips */
 .chips{display:flex;flex-wrap:wrap;gap:4px}
@@ -210,3 +214,40 @@ select.dec{width:auto;padding:4px 10px;border-radius:999px;font-size:.78rem}
 .pill.add{border-style:dashed;color:var(--ink)}
 /* All five sections fit on a phone without sideways scrolling. */
 @media (max-width:520px){.seg button{flex:1 1 auto;padding:7px 6px;font-size:.75rem}}
+
+/* Signed in and sample: the data, shown like a database console. Monospace, square, raw records on demand. */
+.db{display:flex;flex-direction:column;gap:14px;font-family:var(--f-mono);font-size:13px;letter-spacing:0}
+.db .btn,.db .pill,.db .chip,.db select.dec,.db .qfield input,.db .qfield select,.db .qfield textarea{font-family:var(--f-mono);border-radius:4px}
+.db .btn{font-size:.75rem}
+.db .hero,.db .panel,.db .doc,.db .empty{border-radius:6px;box-shadow:none}
+.db .thumb,.db .pages img,.db .pages .pdf,.db .lines{border-radius:4px}
+.db .chip{font-size:.7rem;padding:0 6px}
+.dbbar{display:flex;gap:10px;align-items:baseline;font-size:.75rem;color:var(--muted);padding:0 2px}
+.db .lbl,.kv dt{font-size:.68rem;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--faint)}
+.db .pill{padding:4px 10px;font-size:.75rem}
+.db .seg{background:none;border-radius:0;padding:0;gap:0;border-bottom:1px solid var(--line)}
+.db .seg button{border-radius:0;padding:8px 12px;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:-1px;border-bottom:2px solid transparent}
+.db .seg button[aria-pressed="true"]{background:none;box-shadow:none;border-bottom-color:var(--ink)}
+.db .count{border-radius:3px}
+.db .hero{padding:14px 16px;gap:12px}
+.db .car-name{font-size:.95rem;letter-spacing:0}
+.kv{display:grid;grid-template-columns:7.5em 1fr;gap:8px 12px;margin:0;align-items:baseline}
+.kv dd{margin:0;min-width:0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.kv dd .chips{display:inline-flex;vertical-align:baseline;margin-left:4px}
+.db .section-h{padding:0 2px}
+.db .section-h h3{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em}
+.db .section-h .aside{display:flex;align-items:center;gap:10px}
+.db .row{padding:10px 14px;gap:12px}
+.db .meta,.db .notes{font-size:.75rem}
+.db .when{width:7.5em;font-size:.75rem}
+.db .note-line{font-size:.75rem}
+.db .doc-head{padding:10px 14px}
+.raw-sw{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.raw-sw button{border:0;background:none;padding:1px 7px;font-family:var(--f-mono);font-size:.68rem;color:var(--faint)}
+.raw-sw button[aria-pressed="true"]{background:var(--track);color:var(--ink)}
+.json{margin:0;padding:12px 14px;background:var(--sunken);font-family:var(--f-mono);font-size:12px;line-height:1.55;overflow:auto;max-height:520px;white-space:pre;tab-size:2}
+.json .k{color:var(--muted)}
+.json .s{color:var(--ink)}
+.json .n{color:var(--note)}
+.doc-body .json{border:1px solid var(--line);border-radius:4px}
+@media (max-width:520px){.db .seg button{padding:8px 6px;font-size:.66rem;letter-spacing:.03em}.kv{grid-template-columns:6.5em 1fr}}

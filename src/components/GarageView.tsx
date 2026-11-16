@@ -7,7 +7,7 @@ import type { Car, Data, FileRec, Item, ItemKind, Schedule, Task, Visit } from "
 import { carFields, type Editor, markDone, money, QuickForm } from "./Edit";
 
 type View = "overview" | "schedule" | "documents" | "history" | "cars";
-const VIEWS: [View, string][] = [["overview", "Overview"], ["schedule", "Schedule"], ["documents", "Documents"], ["history", "History"], ["cars", "Cars"]];
+const VIEWS: [View, string][] = [["overview", "Due"], ["schedule", "Schedule"], ["documents", "Documents"], ["history", "History"], ["cars", "Cars"]];
 
 type Ctx = {
   data: Data; schedules: Schedule[]; src: (p: string) => string; car: string; cars: Car[];
@@ -36,9 +36,14 @@ export function GarageView({ data, schedules, src, edit }: { data: Data; schedul
   const ctx: Ctx = { data, schedules, src, car, cars, carById, multi: all.length > 1, open, setOpen, go, edit, editing, setEditing };
 
   // No cars yet: signed in, start by adding one.
-  if (!all.length) return edit ? <CarsView {...ctx} /> : <div className="empty">No cars yet.</div>;
+  if (!all.length) return <div className="db">{edit ? <CarsView {...ctx} /> : <div className="empty">No cars yet.</div>}</div>;
+  const pages = data.files.length;
   return (
-    <>
+    <div className="db">
+      <div className="dbbar">
+        <span className="lbl">Data</span>
+        <span>{[plural(all.length, "car"), plural(data.tasks.length, "task"), plural(data.visits.length, "visit"), plural(pages, "page")].join(" · ")}</span>
+      </div>
       {(all.length > 1 || edit) && (
         <nav className="pills" aria-label="Car">
           {all.length > 1 && [["all", all.length === 2 ? "Both cars" : "All cars"] as const, ...all.map((c) => [c.id, c.name] as const)].map(([id, n]) => (
@@ -56,8 +61,36 @@ export function GarageView({ data, schedules, src, edit }: { data: Data; schedul
         ))}
       </nav>
       {view === "overview" ? <Overview {...ctx} /> : view === "schedule" ? <ScheduleView {...ctx} /> : view === "documents" ? <Documents {...ctx} /> : view === "history" ? <History {...ctx} /> : <CarsView {...ctx} />}
-    </>
+    </div>
   );
+}
+
+const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
+
+/** Switches a panel between its readable rows and the raw records. */
+function RawSwitch({ raw, setRaw }: { raw: boolean; setRaw: (r: boolean) => void }) {
+  return (
+    <span className="raw-sw" role="group" aria-label="Format">
+      <button aria-pressed={!raw} onClick={() => setRaw(false)}>table</button>
+      <button aria-pressed={raw} onClick={() => setRaw(true)}>json</button>
+    </span>
+  );
+}
+
+/** Records as stored, pretty-printed with light highlighting. */
+function Json({ value }: { value: unknown }) {
+  const s = JSON.stringify(value, null, 2);
+  const out: React.ReactNode[] = [];
+  const re = /("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g;
+  let last = 0;
+  for (let m = re.exec(s); m; m = re.exec(s)) {
+    if (m.index > last) out.push(s.slice(last, m.index));
+    out.push(<span key={m.index} className={m[1] ? (m[2] ? "k" : "s") : "n"}>{m[1] ?? m[0]}</span>);
+    if (m[2]) out.push(m[2]);
+    last = re.lastIndex;
+  }
+  out.push(s.slice(last));
+  return <pre className="json">{out}</pre>;
 }
 
 /** A small text button that opens one quick-edit form. */
@@ -67,13 +100,15 @@ function EditBtn({ k, label = "Edit", setEditing }: { k: string; label?: string;
 
 /* ---------- car summary ---------- */
 
-function Hero({ theCar: car, data, edit, editing, setEditing }: Ctx & { theCar: Car }) {
+function Hero({ theCar: car, data, schedules, edit, editing, setEditing }: Ctx & { theCar: Car }) {
   const ts = data.tasks.filter((t) => t.carId === car.id).map((t) => [t, status(t, car)] as const)
     .filter(([, s]) => s.rank < 3).sort((a, b) => a[1].rank - b[1].rank || a[1].key - b[1].key);
   const next = ts[0];
   const lateN = ts.filter(([, s]) => s.rank === 0).length;
   const age = car.kmDate ? daysBetween(car.kmDate, today()) : null;
   const k = `car:${car.id}`;
+  const sc = scheduleFor(car, schedules);
+  const tracked = sc ? sc.items.filter((i) => data.tasks.some((t) => t.carId === car.id && t.sugKey === i.key)).length : 0;
   return (
     <div className="hero">
       <div className="hero-top">
@@ -90,37 +125,36 @@ function Hero({ theCar: car, data, edit, editing, setEditing }: Ctx & { theCar: 
           setEditing(null);
         }} />
       ) : (
-        <div className="hero-grid">
-          <div>
-            <span className="lbl">Odometer</span>
-            <span className="big mono">{car.km != null ? fmtKm(car.km) : "—"}</span>
-            {car.kmDate && <span className={`muted small${age != null && age > 45 ? " stale" : ""}`}>{age === 0 ? "today" : age != null && age < 45 ? `${age} days ago` : `on ${fmtDate(car.kmDate)}`}</span>}
-          </div>
-          <div>
-            <span className="lbl">Next service</span>
-            {next ? (
-              <>
-                <span className="what">{next[0].title}</span>
-                <span className="chips">{next[1].chips.map(([kk, t]) => <span key={t} className={`chip ${kk}`}>{t}</span>)}</span>
-              </>
-            ) : <span className="muted small">Nothing scheduled yet.</span>}
-          </div>
-        </div>
+        <dl className="kv">
+          <dt>Odometer</dt>
+          <dd>
+            {car.km != null ? fmtKm(car.km) : "—"}
+            {car.kmDate && <span className={`muted${age != null && age > 45 ? " stale" : ""}`}> · {age === 0 ? "today" : age != null && age < 45 ? `${age} days ago` : fmtDate(car.kmDate)}</span>}
+          </dd>
+          <dt>Next</dt>
+          <dd>
+            {next ? <>{next[0].title} <span className="chips">{next[1].chips.map(([kk, t]) => <span key={t} className={`chip ${kk}`}>{t}</span>)}</span></> : <span className="muted">nothing scheduled</span>}
+          </dd>
+          <dt>Schedule</dt>
+          <dd>{sc ? <>{tracked} of {sc.items.length} tracked</> : <span className="muted">none</span>}</dd>
+        </dl>
       )}
     </div>
   );
 }
 
-function Section({ title, count, tone, children, aside }: { title: string; count?: number; tone?: string; children: React.ReactNode; aside?: React.ReactNode }) {
+/** A heading over a panel of rows. With `rows`, the panel can show the raw records instead. */
+function Section({ title, count, tone, children, aside, rows }: { title: string; count?: number; tone?: string; children: React.ReactNode; aside?: React.ReactNode; rows?: unknown }) {
+  const [raw, setRaw] = useState(false);
   return (
     <section className="section">
       <div className="section-h">
         {tone && <span className={`dot ${tone}`} />}
         <h3>{title}</h3>
         {count != null && <span className="muted mono">{count}</span>}
-        {aside && <span className="aside">{aside}</span>}
+        <span className="aside">{aside}{rows !== undefined && <RawSwitch raw={raw} setRaw={setRaw} />}</span>
       </div>
-      <div className="panel">{children}</div>
+      <div className="panel">{raw ? <Json value={rows} /> : children}</div>
     </section>
   );
 }
@@ -218,7 +252,7 @@ function Overview(c: Ctx) {
         const grp = tasks.filter(([, s]) => s.rank === r).sort((a, b) => a[1].key - b[1].key || a[0].title.localeCompare(b[0].title));
         if (!grp.length) return null;
         return (
-          <Section key={r} title={name} count={grp.length} tone={tone}>
+          <Section key={r} title={name} count={grp.length} tone={tone} rows={grp.map(([t]) => t)}>
             {grp.map(([t, s]) => <TaskRow key={t.id} t={t} s={s} from={t.visitId ? visitById.get(t.visitId) : undefined} {...c} />)}
           </Section>
         );
@@ -230,7 +264,7 @@ function Overview(c: Ctx) {
         </p>
       )}
       {quotes.length > 0 && (
-        <Section title="Quotes waiting on you" count={quotes.length} tone="soon">
+        <Section title="Quotes waiting on you" count={quotes.length} tone="soon" rows={quotes}>
           {quotes.map((q) => {
             const v = q.visitId ? visitById.get(q.visitId) : undefined;
             return (
@@ -257,7 +291,7 @@ function Overview(c: Ctx) {
         </Section>
       )}
       {notes.length > 0 && (
-        <Section title="Your notes" count={notes.length} tone="note">
+        <Section title="Your notes" count={notes.length} tone="note" rows={notes}>
           {notes.map((n) => (
             <div key={n.id} className="row">
               <div className="row-main">
@@ -298,7 +332,7 @@ function ScheduleView({ data, schedules, cars, multi }: Ctx) {
         }
         const tracked = sc.items.filter((i) => tasks.some((t) => t.sugKey === i.key)).length;
         return (
-          <Section key={c.id} title={multi ? c.name : "Manufacturer schedule"} aside={<span className="muted">{tracked} of {sc.items.length} tracked</span>}>
+          <Section key={c.id} title={multi ? c.name : "Manufacturer schedule"} aside={<span className="muted">{tracked} of {sc.items.length} tracked</span>} rows={sc}>
             <div className="sched-head">
               <span className="title">{sc.name}</span>
               <span className="meta">{sc.sourceUrl ? <a href={sc.sourceUrl} target="_blank" rel="noopener">{sc.source} ↗</a> : sc.source}</span>
@@ -350,6 +384,7 @@ function VisitCard(c: Ctx & { visit: Visit }) {
   const items = data.items.filter((i) => i.visitId === v.id);
   const car = carById(v.carId);
   const k = `visit:${v.id}`;
+  const [raw, setRaw] = useState(false);
   return (
     <div className={`doc${isOpen ? " open" : ""}`}>
       <button className="doc-head" aria-expanded={isOpen} onClick={() => { setOpen(isOpen ? null : v.id); setEditing(null); }}>
@@ -368,6 +403,8 @@ function VisitCard(c: Ctx & { visit: Visit }) {
       </button>
       {isOpen && (
         <div className="doc-body">
+          <div className="qacts"><span className="grow" /><RawSwitch raw={raw} setRaw={setRaw} /></div>
+          {raw ? <Json value={{ visit: v, items, files }} /> : <>
           {files.length > 0 && <div className="pages">{files.map((f, i) => <Page key={f.id} file={f} n={i + 1} src={src} />)}</div>}
           {files.length > 0 && <p className="hint">Tap a page for the original.</p>}
           {edit && editing === k ? (
@@ -393,6 +430,7 @@ function VisitCard(c: Ctx & { visit: Visit }) {
             <Lines {...c} visit={v} items={items} visitCar={car} />
           )}
           {edit && editing !== k && <div className="qacts"><span className="grow" /><EditBtn k={k} label="Edit details" setEditing={setEditing} /></div>}
+          </>}
         </div>
       )}
     </div>
@@ -482,7 +520,7 @@ function History({ data, car, carById, multi, go, edit, editing, setEditing }: C
   const spent = entries.filter((e) => e.date?.startsWith(yr)).reduce((s, e) => s + (cost(e) || 0), 0);
   if (!entries.length) return <div className="empty">No history yet.</div>;
   return (
-    <Section title="Done" count={entries.length} aside={spent > 0 ? <span className="muted"><span className="mono">{fmtMoney(spent)}</span> in {yr}</span> : null}>
+    <Section title="Done" count={entries.length} rows={entries} aside={spent > 0 ? <span className="muted"><span className="mono">{fmtMoney(spent)}</span> in {yr}</span> : null}>
       {entries.map((e) => {
         const lines = done(e.id);
         const hasPaper = data.files.some((f) => f.visitId === e.id) || data.items.some((i) => i.visitId === e.id && i.source === "shop");
@@ -543,7 +581,7 @@ function CarsView({ data, schedules, edit, editing, setEditing }: Ctx) {
   return (
     <>
       {all.length > 0 && (
-        <Section title="Cars" count={all.length}>
+        <Section title="Cars" count={all.length} rows={all}>
           {all.map((c) => {
             const sc = scheduleFor(c, schedules);
             const tasks = data.tasks.filter((t) => t.carId === c.id).length;

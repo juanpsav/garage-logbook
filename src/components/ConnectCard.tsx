@@ -30,12 +30,12 @@ export function ConnectSteps({ mcpUrl }: { mcpUrl: string }) {
   );
 }
 
-/** Signed in: changes go through your agent; small fixes can be made here. */
+/** Signed in: the agent is the interface; this page is the backend. */
 export function ConnectCard({ mcpUrl }: { mcpUrl: string }) {
   return (
-    <section className="card connect">
-      <h2>Changes go through your agent</h2>
-      <p className="small flush">Small fixes can be made here.</p>
+    <section className="connect" aria-label="MCP server">
+      <span className="eyebrow">MCP server</span>
+      <h2>Your agent is the interface.</h2>
       <McpUrl mcpUrl={mcpUrl} />
       <ConnectSteps mcpUrl={mcpUrl} />
     </section>
