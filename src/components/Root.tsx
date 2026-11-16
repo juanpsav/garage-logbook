@@ -7,6 +7,7 @@ import { demoData } from "@/lib/demo";
 import seedSchedules from "@/data/schedules.json";
 import type { CollectionName, Data, Schedule } from "@/lib/types";
 import type { Editor } from "./Edit";
+import { AgentDemo } from "./AgentDemo";
 import { ConnectCard, ConnectSteps, McpUrl } from "./ConnectCard";
 import { GarageView } from "./GarageView";
 import { Mark } from "./Mark";
@@ -137,6 +138,7 @@ function Landing({ mcpUrl, signIn }: { mcpUrl: string; signIn: (() => void) | nu
             </div>
             <ConnectSteps mcpUrl={mcpUrl} />
           </section>
+          <AgentDemo today={today()} />
           <figure className="diagram">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/architecture.svg" width={1144} height={444} alt="Claude, Meta Muse, Grok Bot or any MCP client connect over MCP to the Garage Logbook server, which stores records in Postgres and original pages in Blob storage, and serves this web app." />
